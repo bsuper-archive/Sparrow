@@ -16,18 +16,28 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="0.3"
-        android:orientation="vertical"/>
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/my_mac_address_text_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="22sp"/>
+
         <EditText
             android:id="@+id/message_edittext"
             android:layout_width="match_parent"
-            android:layout_height="22dp"/>
+            android:layout_height="72dp"/>
 
         <Button
             android:id="@+id/message_send_button"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
             android:text="Send"
             android:textSize="22sp"/>
+
+    </LinearLayout>
 
     <ListView
         android:id="@+id/devices_list_view"
