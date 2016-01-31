@@ -18,11 +18,16 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+// UTIL
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+// For the list adapter
 import android.widget.ArrayAdapter;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -37,9 +42,12 @@ public class MainActivity extends AppCompatActivity {
     // Bluetooth
     BluetoothAdapter mBluetoothAdapter;
     String adapterName;
+    String MY_MAC_ADDRESS;
     private boolean bluetoothReady = false;
-    Set<BluetoothDevice> availableDevices;
+    List<BluetoothDevice> availableDevices;
     List<String> displayableDevices;
+
+    // DEBUG MESSAGES
     Boolean DEBUG = true;
 
     // Create a BroadcastReceiver for ACTION_FOUND
@@ -78,21 +86,16 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         deviceListView = (ListView) findViewById(R.id.devices_list_view);
+        deviceListView.setOnItemClickListener(new OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position,
+                                    long id) {
+                connectToDevice(availableDevices.get(position));
+            }
+        });
 
         setupBluetooth();
 
-    }
-
-    /**
-     * This gets the wifi mac address which is probably not what we want
-     *
-     * @return
-     */
-    private String getMacAddress() {
-        WifiManager manager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
-        WifiInfo info = manager.getConnectionInfo();
-        String address = info.getMacAddress();
-        return address;
     }
 
     private void sendMessage(String msg) {
@@ -139,6 +142,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         adapterName = name;
+        MY_MAC_ADDRESS = mBluetoothAdapter.getAddress();
         macAddressTextView.setText(adapterName);
     }
 
@@ -157,7 +161,7 @@ public class MainActivity extends AppCompatActivity {
         startActivity(discoverableIntent);
 
         // GET PAIRED DEVICES
-        availableDevices = new HashSet<>();
+        availableDevices = new ArrayList<>();
         for (BluetoothDevice btd : mBluetoothAdapter.getBondedDevices()) {
             availableDevices.add(btd);
         }
@@ -191,7 +195,7 @@ public class MainActivity extends AppCompatActivity {
      * @param bluDevices
      * @return
      */
-    private List<String> convertDevicesToStrings(Set<BluetoothDevice> bluDevices) {
+    private List<String> convertDevicesToStrings(List<BluetoothDevice> bluDevices) {
         List<String> devices = new ArrayList<>();
         for (BluetoothDevice device : bluDevices) {
             devices.add(deviceToString(device));
@@ -220,4 +224,9 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void connectToDevice(BluetoothDevice device) {
+        if (DEBUG) {
+            Log.d(TAG, "Attempting to connect to device: " + deviceToString(device));
+        }
+    }
 }
