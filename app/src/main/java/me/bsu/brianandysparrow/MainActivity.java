@@ -2,12 +2,11 @@ package me.bsu.brianandysparrow;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothServerSocket;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.net.wifi.WifiInfo;
-import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -20,9 +19,8 @@ import android.widget.Toast;
 
 // UTIL
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
+import java.util.UUID;
 
 // For the list adapter
 import android.widget.ArrayAdapter;
@@ -46,29 +44,14 @@ public class MainActivity extends AppCompatActivity {
     private boolean bluetoothReady = false;
     List<BluetoothDevice> availableDevices;
     List<String> displayableDevices;
+    Boolean isServer;
+
+    // This uniquely identifies our app on bluetooth connection
+    UUID MY_UUID = UUID.fromString("9a74be0b-49c2-4a93-9dee-df037f822b4");
+    String APP_NAME = "GROUP-10-TWITTER-BT";
 
     // DEBUG MESSAGES
     Boolean DEBUG = true;
-
-    // Create a BroadcastReceiver for ACTION_FOUND
-    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
-        public void onReceive(Context context, Intent intent) {
-            String action = intent.getAction();
-            // When discovery finds a device
-            if (BluetoothDevice.ACTION_FOUND.equals(action)) {
-                // Get the BluetoothDevice object from the Intent
-                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                // Add the name and address to an array adapter to show in a ListView
-                String deviceStr = deviceToString(device);
-                if (DEBUG) {
-                    Log.d(TAG, "Discovered device: " + deviceStr);
-                }
-                availableDevices.add(device);
-                displayableDevices.add(deviceToString(device));
-                displayDevicesList(displayableDevices);
-            }
-        }
-    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -101,6 +84,10 @@ public class MainActivity extends AppCompatActivity {
     private void sendMessage(String msg) {
         Toast.makeText(this, "Message Sent", Toast.LENGTH_SHORT).show();
     }
+
+    /************************************
+     * SETUP BLUETOOTH AND FIND DEVICES *
+     ************************************/
 
     private final static int REQUEST_ENABLE_BT = 1;
 
@@ -179,6 +166,40 @@ public class MainActivity extends AppCompatActivity {
         mBluetoothAdapter.startDiscovery();
     }
 
+    // Create a BroadcastReceiver for ACTION_FOUND
+    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            // When discovery finds a device
+            if (BluetoothDevice.ACTION_FOUND.equals(action)) {
+                // Get the BluetoothDevice object from the Intent
+                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                // Add the name and address to an array adapter to show in a ListView
+                String deviceStr = deviceToString(device);
+                if (DEBUG) {
+                    Log.d(TAG, "Discovered device: " + deviceStr);
+                }
+                availableDevices.add(device);
+                displayableDevices.add(deviceToString(device));
+                displayDevicesList(displayableDevices);
+            }
+        }
+    };
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        Toast.makeText(this, "Request Code: " + requestCode + " Result OK: " + (resultCode == RESULT_OK), Toast.LENGTH_SHORT).show();
+        if (requestCode == REQUEST_ENABLE_BT && resultCode == RESULT_OK) {
+            bluetoothReady = true;
+            setupBluetooth();
+        }
+    }
+
+    /********************
+     * STRING UTILITIES *
+     ********************/
+
     /**
      * Returns a display string from a bluetooth device.
      *
@@ -214,19 +235,47 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        Toast.makeText(this, "Request Code: " + requestCode + " Result OK: " + (resultCode == RESULT_OK), Toast.LENGTH_SHORT).show();
-        if (requestCode == REQUEST_ENABLE_BT && resultCode == RESULT_OK) {
-            bluetoothReady = true;
-            setupBluetooth();
+    /**************************
+     * CONNECTING TO A DEVICE *
+     **************************/
+
+    /**
+     * Connect as the client. This means we need to hold a BluetoothSocket
+     * @param device
+     */
+    private void connectAsClient(BluetoothDevice device) {
+        if (DEBUG) {
+            Log.d(TAG, "Attempting to connect as client to device: " + deviceToString(device));
         }
+        ConnectThread client = new ConnectThread(device, mBluetoothAdapter, MY_UUID);
+        client.start();
     }
 
-    private void connectToDevice(BluetoothDevice device) {
+    /**
+     * Connect as the server. This means we need to hold a BluetoothServerSocket
+     * @param device
+     */
+    private void connectAsServer(BluetoothDevice device) {
         if (DEBUG) {
-            Log.d(TAG, "Attempting to connect to device: " + deviceToString(device));
+            Log.d(TAG, "Attempting to connect as server to device: " + deviceToString(device));
+        }
+        AcceptThread server = new AcceptThread(mBluetoothAdapter, APP_NAME, MY_UUID);
+        server.start();
+    }
+
+    /**
+     * Determine whether we should connect as client or server and start the connection process
+     *
+     * @param device
+     */
+    private void connectToDevice(BluetoothDevice device) {
+        // Determine whether you should be the server or the client, based on lower first digit
+        if (device.getAddress().charAt(0) < MY_MAC_ADDRESS.charAt(0)) {
+            isServer = false;
+            connectAsClient(device);
+        } else {
+            isServer = true;
+            connectAsServer(device);
         }
     }
 }
