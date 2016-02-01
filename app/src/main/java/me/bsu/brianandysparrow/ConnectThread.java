@@ -3,6 +3,8 @@ package me.bsu.brianandysparrow;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 
 import java.util.UUID;
@@ -20,11 +22,13 @@ class ConnectThread extends Thread {
     private final BluetoothSocket mmSocket;
     private final BluetoothDevice mmDevice;
     private final BluetoothAdapter mBluetoothAdapter;
+    private final Handler mHandler;
 
-    public ConnectThread(BluetoothDevice device, BluetoothAdapter adapter, UUID uuid) {
+    public ConnectThread(BluetoothDevice device, BluetoothAdapter adapter, UUID uuid, Handler connectionHandler) {
         // Use a temporary object that is later assigned to mmSocket,
         // because mmSocket is final
-        this.mBluetoothAdapter = adapter;
+        mBluetoothAdapter = adapter;
+        mHandler = connectionHandler;
         BluetoothSocket tmp = null;
         mmDevice = device;
 
@@ -51,11 +55,16 @@ class ConnectThread extends Thread {
             try {
                 mmSocket.close();
             } catch (IOException closeException) { }
+
+            // Notify main thread that we couldn't connect to the device
+            mHandler.obtainMessage(1, null)
+                    .sendToTarget();
             return;
         }
 
-        // Do work to manage the connection (in a separate thread)
-//        manageConnectedSocket(mmSocket);
+        // Send the socket back to the main thread
+        Message connected = mHandler.obtainMessage(0, mmSocket);
+        connected.sendToTarget();
     }
 
     /** Will cancel an in-progress connection, and close the socket */

@@ -5,6 +5,8 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.bluetooth.BluetoothServerSocket;
 import android.util.Log;
+import android.os.Handler;
+import android.os.Message;
 
 import java.util.UUID;
 import java.io.IOException;
@@ -19,10 +21,12 @@ class AcceptThread extends Thread {
     private static final String TAG = "me.bsu.Accept";
 
     private final BluetoothServerSocket mmServerSocket;
+    private final Handler mHandler;
 
-    public AcceptThread(BluetoothAdapter mBluetoothAdapter, String NAME, UUID uuid) {
+    public AcceptThread(BluetoothAdapter mBluetoothAdapter, String NAME, UUID uuid, Handler connectedHandler) {
         // Use a temporary object that is later assigned to mmServerSocket,
         // because mmServerSocket is final
+        mHandler = connectedHandler;
 
         BluetoothServerSocket tmp = null;
         try {
@@ -45,8 +49,10 @@ class AcceptThread extends Thread {
             }
             // If a connection was accepted
             if (socket != null) {
-                // Do work to manage the connection (in a separate thread)
-//                manageConnectedSocket(socket);
+
+                // Send the socket back to the main thread
+                mHandler.obtainMessage(0, socket)
+                        .sendToTarget();
 
                 // Close the server socket because we don't need it anymore
                 try {

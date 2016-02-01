@@ -3,11 +3,13 @@ package me.bsu.brianandysparrow;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothServerSocket;
+import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+import android.os.Looper;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -16,6 +18,10 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+// For Handling other threads
+import android.os.Message;
+import android.os.Handler;
 
 // UTIL
 import java.util.ArrayList;
@@ -52,6 +58,10 @@ public class MainActivity extends AppCompatActivity {
 
     // DEBUG MESSAGES
     Boolean DEBUG = true;
+
+    /********
+     * INIT *
+     ********/
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -247,7 +257,7 @@ public class MainActivity extends AppCompatActivity {
         if (DEBUG) {
             Log.d(TAG, "Attempting to connect as client to device: " + deviceToString(device));
         }
-        ConnectThread client = new ConnectThread(device, mBluetoothAdapter, MY_UUID);
+        ConnectThread client = new ConnectThread(device, mBluetoothAdapter, MY_UUID, connectedHandler);
         client.start();
     }
 
@@ -259,7 +269,7 @@ public class MainActivity extends AppCompatActivity {
         if (DEBUG) {
             Log.d(TAG, "Attempting to connect as server to device: " + deviceToString(device));
         }
-        AcceptThread server = new AcceptThread(mBluetoothAdapter, APP_NAME, MY_UUID);
+        AcceptThread server = new AcceptThread(mBluetoothAdapter, APP_NAME, MY_UUID, connectedHandler);
         server.start();
     }
 
@@ -278,4 +288,57 @@ public class MainActivity extends AppCompatActivity {
             connectAsServer(device);
         }
     }
+
+    /*****************************
+     * RECEIVE AND SEND MESSAGES *
+     *****************************/
+
+    /**
+     * Init the connected thread to start sending and receiving tweets
+     */
+    public void startTweetExchange(BluetoothSocket socket) {
+        ConnectedThread openPort = new ConnectedThread(socket, dataReceivedHandler);
+        openPort.start();
+
+        // write stuff to the open port here
+        sendTweets(openPort);
+    }
+
+    /**
+     * Display the tweets we've gotten
+     */
+    public void logTweets(String tweets) {
+
+    }
+
+    /**
+     * Send the tweets that we have to the other end
+     */
+    public void sendTweets(ConnectedThread open) {
+
+    }
+
+    /**
+     * Called by either the accept or connect thread when a connection is established
+     * If success (what == 0) then msg.obj holds a connected bluetooth socket
+     */
+    Handler connectedHandler = new Handler(Looper.getMainLooper()) {
+        @Override
+        public void handleMessage(Message msg) {
+            if (msg.what == 0) {
+                startTweetExchange((BluetoothSocket) msg.obj);
+            } else {
+                findDevices();
+            }
+        }
+    };
+
+    Handler dataReceivedHandler = new Handler(Looper.getMainLooper()) {
+        @Override
+        public void handleMessage(Message msg) {
+            if (msg.what == 0) {
+                logTweets((String) msg.obj);
+            }
+        }
+    };
 }
