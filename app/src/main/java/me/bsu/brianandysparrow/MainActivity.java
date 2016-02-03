@@ -279,8 +279,9 @@ public class MainActivity extends AppCompatActivity {
      * @param device
      */
     private void connectToDevice(BluetoothDevice device) {
-        // Determine whether you should be the server or the client, based on lower first digit
-        if (device.getAddress().charAt(0) < MY_MAC_ADDRESS.charAt(0)) {
+        // Determine whether you should be the server or the client, based on MAC address
+        int compare = device.getAddress().compareToIgnoreCase(MY_MAC_ADDRESS);
+        if (compare < 0) {
             isServer = false;
             connectAsClient(device);
         } else {
@@ -307,15 +308,16 @@ public class MainActivity extends AppCompatActivity {
     /**
      * Display the tweets we've gotten
      */
-    public void logTweets(String tweets) {
-
+    public void logTweets(String tweet) {
+        Log.d(TAG, "incoming tweet");
+        Log.d(TAG, tweet);
     }
 
     /**
      * Send the tweets that we have to the other end
      */
     public void sendTweets(ConnectedThread open) {
-
+        open.write("Hello world".getBytes());
     }
 
     /**
@@ -326,6 +328,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void handleMessage(Message msg) {
             if (msg.what == 0) {
+                Log.d(TAG, "starting tweet exchange");
                 startTweetExchange((BluetoothSocket) msg.obj);
             } else {
                 findDevices();
@@ -337,7 +340,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void handleMessage(Message msg) {
             if (msg.what == 0) {
-                logTweets((String) msg.obj);
+                logTweets(new String((byte[]) msg.obj));
             }
         }
     };

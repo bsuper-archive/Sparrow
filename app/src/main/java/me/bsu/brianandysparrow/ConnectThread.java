@@ -63,6 +63,7 @@ class ConnectThread extends Thread {
         }
 
         // Send the socket back to the main thread
+        Log.d(TAG, "connected to server");
         Message connected = mHandler.obtainMessage(0, mmSocket);
         connected.sendToTarget();
     }

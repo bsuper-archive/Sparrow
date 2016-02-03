@@ -50,6 +50,7 @@ class AcceptThread extends Thread {
             // If a connection was accepted
             if (socket != null) {
 
+                Log.d(TAG, "connected to client");
                 // Send the socket back to the main thread
                 mHandler.obtainMessage(0, socket)
                         .sendToTarget();
