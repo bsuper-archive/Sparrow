@@ -25,8 +25,6 @@ public final class Handshake extends Message<Handshake, Handshake.Builder> {
 
   private static final long serialVersionUID = 0L;
 
-  public static final String DEFAULT_UUID = "";
-
   /**
    * A list of features that the sender of the message supports.
    */
@@ -37,45 +35,19 @@ public final class Handshake extends Message<Handshake, Handshake.Builder> {
   )
   public final List<Feature> features;
 
-  /**
-   * DO NOT CHANGE ANYTHING ABOVE THIS LINE.
-   * FILL IN (IF NEEDED)
-   * sender uuid
-   */
-  @WireField(
-      tag = 2,
-      adapter = "com.squareup.wire.ProtoAdapter#STRING",
-      label = WireField.Label.REQUIRED
-  )
-  public final String uuid;
-
-  /**
-   * current vector clocks
-   */
-  @WireField(
-      tag = 3,
-      adapter = "me.bsu.brianandysparrow.proto.VectorClockItem#ADAPTER",
-      label = WireField.Label.REPEATED
-  )
-  public final List<VectorClockItem> vectorClocks;
-
-  public Handshake(List<Feature> features, String uuid, List<VectorClockItem> vectorClocks) {
-    this(features, uuid, vectorClocks, ByteString.EMPTY);
+  public Handshake(List<Feature> features) {
+    this(features, ByteString.EMPTY);
   }
 
-  public Handshake(List<Feature> features, String uuid, List<VectorClockItem> vectorClocks, ByteString unknownFields) {
+  public Handshake(List<Feature> features, ByteString unknownFields) {
     super(ADAPTER, unknownFields);
     this.features = Internal.immutableCopyOf("features", features);
-    this.uuid = uuid;
-    this.vectorClocks = Internal.immutableCopyOf("vectorClocks", vectorClocks);
   }
 
   @Override
   public Builder newBuilder() {
     Builder builder = new Builder();
     builder.features = Internal.copyOf("features", features);
-    builder.uuid = uuid;
-    builder.vectorClocks = Internal.copyOf("vectorClocks", vectorClocks);
     builder.addUnknownFields(unknownFields());
     return builder;
   }
@@ -86,9 +58,7 @@ public final class Handshake extends Message<Handshake, Handshake.Builder> {
     if (!(other instanceof Handshake)) return false;
     Handshake o = (Handshake) other;
     return Internal.equals(unknownFields(), o.unknownFields())
-        && Internal.equals(features, o.features)
-        && Internal.equals(uuid, o.uuid)
-        && Internal.equals(vectorClocks, o.vectorClocks);
+        && Internal.equals(features, o.features);
   }
 
   @Override
@@ -97,8 +67,6 @@ public final class Handshake extends Message<Handshake, Handshake.Builder> {
     if (result == 0) {
       result = unknownFields().hashCode();
       result = result * 37 + (features != null ? features.hashCode() : 1);
-      result = result * 37 + (uuid != null ? uuid.hashCode() : 0);
-      result = result * 37 + (vectorClocks != null ? vectorClocks.hashCode() : 1);
       super.hashCode = result;
     }
     return result;
@@ -108,21 +76,14 @@ public final class Handshake extends Message<Handshake, Handshake.Builder> {
   public String toString() {
     StringBuilder builder = new StringBuilder();
     if (features != null) builder.append(", features=").append(features);
-    if (uuid != null) builder.append(", uuid=").append(uuid);
-    if (vectorClocks != null) builder.append(", vectorClocks=").append(vectorClocks);
     return builder.replace(0, 2, "Handshake{").append('}').toString();
   }
 
   public static final class Builder extends Message.Builder<Handshake, Builder> {
     public List<Feature> features;
 
-    public String uuid;
-
-    public List<VectorClockItem> vectorClocks;
-
     public Builder() {
       features = Internal.newMutableList();
-      vectorClocks = Internal.newMutableList();
     }
 
     /**
@@ -134,31 +95,9 @@ public final class Handshake extends Message<Handshake, Handshake.Builder> {
       return this;
     }
 
-    /**
-     * DO NOT CHANGE ANYTHING ABOVE THIS LINE.
-     * FILL IN (IF NEEDED)
-     * sender uuid
-     */
-    public Builder uuid(String uuid) {
-      this.uuid = uuid;
-      return this;
-    }
-
-    /**
-     * current vector clocks
-     */
-    public Builder vectorClocks(List<VectorClockItem> vectorClocks) {
-      Internal.checkElementsNotNull(vectorClocks);
-      this.vectorClocks = vectorClocks;
-      return this;
-    }
-
     @Override
     public Handshake build() {
-      if (uuid == null) {
-        throw Internal.missingRequiredFields(uuid, "uuid");
-      }
-      return new Handshake(features, uuid, vectorClocks, buildUnknownFields());
+      return new Handshake(features, buildUnknownFields());
     }
   }
 
@@ -170,16 +109,12 @@ public final class Handshake extends Message<Handshake, Handshake.Builder> {
     @Override
     public int encodedSize(Handshake value) {
       return Feature.ADAPTER.asRepeated().encodedSizeWithTag(1, value.features)
-          + ProtoAdapter.STRING.encodedSizeWithTag(2, value.uuid)
-          + VectorClockItem.ADAPTER.asRepeated().encodedSizeWithTag(3, value.vectorClocks)
           + value.unknownFields().size();
     }
 
     @Override
     public void encode(ProtoWriter writer, Handshake value) throws IOException {
       if (value.features != null) Feature.ADAPTER.asRepeated().encodeWithTag(writer, 1, value.features);
-      ProtoAdapter.STRING.encodeWithTag(writer, 2, value.uuid);
-      if (value.vectorClocks != null) VectorClockItem.ADAPTER.asRepeated().encodeWithTag(writer, 3, value.vectorClocks);
       writer.writeBytes(value.unknownFields());
     }
 
@@ -197,8 +132,6 @@ public final class Handshake extends Message<Handshake, Handshake.Builder> {
             }
             break;
           }
-          case 2: builder.uuid(ProtoAdapter.STRING.decode(reader)); break;
-          case 3: builder.vectorClocks.add(VectorClockItem.ADAPTER.decode(reader)); break;
           default: {
             FieldEncoding fieldEncoding = reader.peekFieldEncoding();
             Object value = fieldEncoding.rawProtoAdapter().decode(reader);
@@ -213,7 +146,6 @@ public final class Handshake extends Message<Handshake, Handshake.Builder> {
     @Override
     public Handshake redact(Handshake value) {
       Builder builder = value.newBuilder();
-      Internal.redactElements(builder.vectorClocks, VectorClockItem.ADAPTER);
       builder.clearUnknownFields();
       return builder.build();
     }

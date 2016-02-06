@@ -1,0 +1,55 @@
+syntax = "proto2";
+
+package berkeley.cs194;
+
+option java_package = "me.bsu.brianandysparrow.proto";
+
+// Specifies a feature that a Sparrow implementation supports.
+enum Feature {
+  // All compliant implementations must support BASIC.
+  BASIC = 1;
+
+  // DO NOT CHANGE ANYTHING ABOVE THIS LINE.
+
+  // FILL IN (IF NEEDED)
+}
+
+// Control message sent between the client and server before data exchange.
+message Handshake {
+  // A list of features that the sender of the message supports.
+  repeated Feature features = 1;
+
+  // DO NOT CHANGE ANYTHING ABOVE THIS LINE.
+
+  // FILL IN (IF NEEDED)
+}
+
+// A single message.  Can be either public or private.
+message Tweet {
+  // The unique id of the tweet.  Set by the tweet's author.
+  required int32 id = 1;
+
+  // The username of the tweet's author.
+  required string author = 2;
+
+  // The text content of the tweet.
+  required string content = 3;
+
+  // The username of the recipient.  If set, the message is a private (direct)
+  // message.  If not set, the message is a public (broadcast) message.
+  optional string recipient = 4;
+
+  // DO NOT CHANGE ANYTHING ABOVE THIS LINE.
+
+  // FILL IN (IF NEEDED)
+}
+
+// A message that is sent by the client and server after the handshake to exchange Tweets.
+message TweetExchange {
+  // A list of tweets.
+  repeated Tweet tweets = 1;
+
+  // DO NOT CHANGE ANYTHING ABOVE THIS LINE.
+
+  // FILL IN (IF NEEDED)
+}
