@@ -8,6 +8,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.hardware.usb.UsbDeviceConnection;
 import android.os.Bundle;
 import android.os.Looper;
 import android.support.v7.app.AppCompatActivity;
@@ -33,9 +34,15 @@ import android.widget.ArrayAdapter;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 
+// Storing this users UUID
+import android.content.SharedPreferences;
+
 public class MainActivity extends AppCompatActivity {
 
     public static final String TAG = "me.bsu.MainActivity";
+
+    // Shared preferences file
+    public static final String PREFS_NAME = "MyPrefsFile";
 
     // UI
     TextView macAddressTextView;
@@ -53,7 +60,9 @@ public class MainActivity extends AppCompatActivity {
     Boolean isServer;
 
     // This uniquely identifies our app on bluetooth connection
-    UUID MY_UUID = UUID.fromString("9a74be0b-49c2-4a93-9dee-df037f822b4");
+    UUID MY_UUID = null;
+    String MY_UUID_KEY = "USER_UUID_KEY";
+    UUID BLUETOOTH_UUID = UUID.fromString("9a74be0b-49c2-4a93-9dee-df037f822b4");
     String APP_NAME = "GROUP-10-TWITTER-BT";
 
     // DEBUG MESSAGES
@@ -67,6 +76,16 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        // Fetch our UUID if it exists
+        SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
+        String uuidString = settings.getString(MY_UUID_KEY, null);
+
+        if (uuidString == null) {
+            generateNewUUID(settings);
+        } else {
+            MY_UUID = UUID.fromString();
+        }
 
         macAddressTextView = (TextView) findViewById(R.id.my_mac_address_text_view);
         messageEditText = (EditText) findViewById(R.id.message_edittext);
@@ -88,6 +107,18 @@ public class MainActivity extends AppCompatActivity {
         });
 
         setupBluetooth();
+
+    }
+
+    /**
+     * Generate and store a new UUID for this user
+     * @param prefs
+     */
+    private void generateNewUUID(SharedPreferences prefs) {
+        MY_UUID = UUID.randomUUID();
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putString(MY_UUID_KEY, MY_UUID.toString());
+        editor.commit();
 
     }
 
@@ -174,6 +205,8 @@ public class MainActivity extends AppCompatActivity {
         IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
         registerReceiver(mReceiver, filter); // Don't forget to unregister during onDestroy
         mBluetoothAdapter.startDiscovery();
+
+        DeviceConnector connector = new
     }
 
     // Create a BroadcastReceiver for ACTION_FOUND
@@ -257,7 +290,7 @@ public class MainActivity extends AppCompatActivity {
         if (DEBUG) {
             Log.d(TAG, "Attempting to connect as client to device: " + deviceToString(device));
         }
-        ConnectThread client = new ConnectThread(device, mBluetoothAdapter, MY_UUID, connectedHandler);
+        ConnectThread client = new ConnectThread(device, mBluetoothAdapter, BLUETOOTH_UUID, connectedHandler);
         client.start();
     }
 
@@ -269,7 +302,7 @@ public class MainActivity extends AppCompatActivity {
         if (DEBUG) {
             Log.d(TAG, "Attempting to connect as server to device: " + deviceToString(device));
         }
-        AcceptThread server = new AcceptThread(mBluetoothAdapter, APP_NAME, MY_UUID, connectedHandler);
+        AcceptThread server = new AcceptThread(mBluetoothAdapter, APP_NAME, BLUETOOTH_UUID, connectedHandler);
         server.start();
     }
 
@@ -336,6 +369,9 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+    /**
+     * Called by the connected thread when it receives data on the open bluetooth socket
+     */
     Handler dataReceivedHandler = new Handler(Looper.getMainLooper()) {
         @Override
         public void handleMessage(Message msg) {
