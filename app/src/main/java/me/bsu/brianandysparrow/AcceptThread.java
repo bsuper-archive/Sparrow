@@ -47,19 +47,15 @@ class AcceptThread extends Thread {
             } catch (IOException e) {
                 break;
             }
-            // If a connection was accepted
+            // If a connection was accepted pass the socket,
+            // but then stay open so that we can accept more connections
             if (socket != null) {
 
                 Log.d(TAG, "connected to client");
-                // Send the socket back to the main thread
-                mHandler.obtainMessage(0, socket)
+                // Send the socket back to the main thread,
+                // pass -1 as position since this is a server connection
+                mHandler.obtainMessage(0, -1, 0, socket)
                         .sendToTarget();
-
-                // Close the server socket because we don't need it anymore
-                try {
-                    mmServerSocket.close();
-                } catch( IOException closeException) {}
-                break;
             }
         }
     }

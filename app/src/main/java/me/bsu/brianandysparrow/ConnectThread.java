@@ -23,14 +23,16 @@ class ConnectThread extends Thread {
     private final BluetoothDevice mmDevice;
     private final BluetoothAdapter mBluetoothAdapter;
     private final Handler mHandler;
+    private final int position;
 
-    public ConnectThread(BluetoothDevice device, BluetoothAdapter adapter, UUID uuid, Handler connectionHandler) {
+    public ConnectThread(BluetoothDevice device, int index, BluetoothAdapter adapter, UUID uuid, Handler connectionHandler) {
         // Use a temporary object that is later assigned to mmSocket,
         // because mmSocket is final
         mBluetoothAdapter = adapter;
         mHandler = connectionHandler;
         BluetoothSocket tmp = null;
         mmDevice = device;
+        position = index;
 
         // Get a BluetoothSocket to connect with the given BluetoothDevice
         try {
@@ -64,8 +66,8 @@ class ConnectThread extends Thread {
 
         // Send the socket back to the main thread
         Log.d(TAG, "connected to server");
-        Message connected = mHandler.obtainMessage(0, mmSocket);
-        connected.sendToTarget();
+        mHandler.obtainMessage(0, position, 0, mmSocket)
+                .sendToTarget();
     }
 
     /** Will cancel an in-progress connection, and close the socket */
