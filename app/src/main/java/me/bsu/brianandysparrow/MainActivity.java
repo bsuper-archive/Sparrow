@@ -89,9 +89,11 @@ public class MainActivity extends AppCompatActivity {
         String uuidString = settings.getString(MY_UUID_KEY, null);
 
         if (uuidString == null) {
+            Log.d(TAG, "Generating new uuid for user");
             generateNewUUID(settings);
         } else {
             MY_UUID = UUID.fromString(uuidString);
+            Log.d(TAG, "UUID for user already exists: " + MY_UUID);
         }
 
         macAddressTextView = (TextView) findViewById(R.id.my_mac_address_text_view);
