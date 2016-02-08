@@ -12,6 +12,7 @@ enum Feature {
   // DO NOT CHANGE ANYTHING ABOVE THIS LINE.
 
   // FILL IN (IF NEEDED)
+  VECTOR_CLOCK = 2;
 }
 
 // Control message sent between the client and server before data exchange.
@@ -22,6 +23,7 @@ message Handshake {
   // DO NOT CHANGE ANYTHING ABOVE THIS LINE.
 
   // FILL IN (IF NEEDED)
+  required string uuid = 2;
 }
 
 // A single message.  Can be either public or private.
