@@ -44,6 +44,9 @@ message Tweet {
   // DO NOT CHANGE ANYTHING ABOVE THIS LINE.
 
   // FILL IN (IF NEEDED)
+  required string sender_uuid = 5;
+
+  repeated VectorClockItem vector_clocks = 6;
 }
 
 // A message that is sent by the client and server after the handshake to exchange Tweets.
@@ -54,4 +57,11 @@ message TweetExchange {
   // DO NOT CHANGE ANYTHING ABOVE THIS LINE.
 
   // FILL IN (IF NEEDED)
+}
+
+message VectorClockItem {
+  required string uuid = 1;
+
+  required int32 clock = 2;
+
 }
