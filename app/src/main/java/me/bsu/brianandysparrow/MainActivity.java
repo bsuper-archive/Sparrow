@@ -52,6 +52,7 @@ public class MainActivity extends AppCompatActivity {
     private ServiceConnection deviceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder binder) {
+            Log.d(TAG, "Device service connected");
             DeviceConnector deviceService = ((DeviceConnector.LocalBinder) binder).getInstance();
             deviceService.findDevices(connectedHandler, dataReceivedHandler, mBluetoothAdapter);
         }
@@ -89,11 +90,15 @@ public class MainActivity extends AppCompatActivity {
         String uuidString = settings.getString(MY_UUID_KEY, null);
 
         if (uuidString == null) {
-            Log.d(TAG, "Generating new uuid for user");
+            if (DEBUG) {
+                Log.d(TAG, "Generating new uuid for user");
+            }
             generateNewUUID(settings);
         } else {
             MY_UUID = UUID.fromString(uuidString);
-            Log.d(TAG, "UUID for user already exists: " + MY_UUID);
+            if (DEBUG) {
+                Log.d(TAG, "UUID for user already exists: " + MY_UUID);
+            }
         }
 
         macAddressTextView = (TextView) findViewById(R.id.my_mac_address_text_view);
@@ -106,6 +111,9 @@ public class MainActivity extends AppCompatActivity {
                 sendMessage(msg);
             }
         });
+
+        // Start connecting to bluetooth
+        setupBluetooth();
     }
 
     /**
@@ -127,7 +135,17 @@ public class MainActivity extends AppCompatActivity {
      * Start the bluetooth service and make ourselves discoverable
      */
     private void bindDeviceService() {
+        if (DEBUG) {
+            Log.d(TAG, "Binding device service");
+
+        }
+        // MAKE US DISCOVERABLE
+        Intent discoverableIntent = new
+                Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
+        discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 0);
+        startActivity(discoverableIntent);
         mBluetoothAdapter.startDiscovery();
+
         bindService(new Intent(this,
                 DeviceConnector.class), deviceConnection, Context.BIND_AUTO_CREATE);
     }
@@ -199,7 +217,6 @@ public class MainActivity extends AppCompatActivity {
         //NOTE: WE ONLY READ 1024 BYTES INTO OUR BUFFER A TIME SO MESSAGES COULD GET CUT OFF
     }
 
-
     /**
      * Receive data.
      * We can uniquely identify a connection by (mac address, UUID)
@@ -225,6 +242,8 @@ public class MainActivity extends AppCompatActivity {
     public void initiateHandshake(BluetoothSocket socket) {
         ConnectedThread openPort = new ConnectedThread(socket, dataReceivedHandler);
         openPort.start();
+
+        //TODO: WRITE HANDSHAKE BYTES
     }
 
     /**

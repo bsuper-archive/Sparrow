@@ -44,6 +44,11 @@ public class DeviceConnector extends Service {
     String APP_NAME = "GROUP-10-TWITTER-BT";
 
     @Override
+    public void onCreate() {
+        mIBinder = new LocalBinder();
+    }
+
+    @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         return START_STICKY;
     }
@@ -65,12 +70,6 @@ public class DeviceConnector extends Service {
         if (DEBUG) {
             Log.d(TAG, "finding devices");
         }
-
-        // MAKE US DISCOVERABLE
-        Intent discoverableIntent = new
-                Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
-        discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 0);
-        startActivity(discoverableIntent);
 
         // GET PAIRED DEVICES
         availableDevices = new ArrayList<>();
@@ -124,7 +123,9 @@ public class DeviceConnector extends Service {
                 length = availableDevices.size();
                 for(i = 0; i < length; i++) {
                     if (!connectedDevices.contains(i)) {
-                        (new ConnectThread(availableDevices.get(i), i, mBluetoothAdapter, BLUETOOTH_UUID, cHandler)).start();
+                        ConnectThread t = new ConnectThread(availableDevices.get(i), i, mBluetoothAdapter, BLUETOOTH_UUID, cHandler);
+                        t.start();
+                        connectedDevices.add(i);
                     }
                 }
             }
@@ -155,6 +156,7 @@ public class DeviceConnector extends Service {
     @Override
     public IBinder onBind(Intent intent)
     {
+        Log.d(TAG, "onBind binder: " + mIBinder);
         return mIBinder;
     }
 
