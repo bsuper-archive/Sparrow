@@ -13,7 +13,13 @@ public enum Feature implements WireEnum {
   /**
    * All compliant implementations must support BASIC.
    */
-  BASIC(1);
+  BASIC(1),
+
+  /**
+   * DO NOT CHANGE ANYTHING ABOVE THIS LINE.
+   * FILL IN (IF NEEDED)
+   */
+  VECTOR_CLOCK(2);
 
   public static final ProtoAdapter<Feature> ADAPTER = ProtoAdapter.newEnumAdapter(Feature.class);
 
@@ -29,6 +35,7 @@ public enum Feature implements WireEnum {
   public static Feature fromValue(int value) {
     switch (value) {
       case 1: return BASIC;
+      case 2: return VECTOR_CLOCK;
       default: return null;
     }
   }
