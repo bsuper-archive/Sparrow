@@ -20,6 +20,14 @@ import android.os.Binder;
 import java.util.ArrayList;
 import java.util.UUID;
 import java.util.HashSet;
+import java.util.HashMap;
+
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Created by aschmitt on 2/3/16.
@@ -33,15 +41,19 @@ public class DeviceConnector extends Service {
     private static String TAG = "me.bsu.DeviceConnector";
 
     private BluetoothAdapter mBluetoothAdapter;
-    private ArrayList<BluetoothDevice> availableDevices;
+    private HashSet<BluetoothDevice> availableDevices;
     private Boolean DEBUG = true;
     private Handler dHandler;
     private Handler cHandler;
     private LocalBinder mIBinder;
-    private HashSet<Integer> connectedDevices = new HashSet<>();
+    private HashMap<BluetoothDevice, DeviceTriplet> connectedDevices = new HashMap<>();
     private int ANDROID_DEVICE_LIMIT = 7;
-    UUID BLUETOOTH_UUID = UUID.fromString("9a74be0b-49c2-4a93-9dee-df037f822b4");
-    String APP_NAME = "GROUP-10-TWITTER-BT";
+    private UUID BLUETOOTH_UUID = UUID.fromString("9a74be0b-49c2-4a93-9dee-df037f822b4");
+    private String APP_NAME = "GROUP-10-TWITTER-BT";
+
+    private Long TIMEOUT_MILLIS = new Long(15000);
+    private Long CONNECT_TIME = new Long(20000);
+    private Long DISCOVER_TIME = new Long(10000);
 
     @Override
     public void onCreate() {
@@ -72,7 +84,7 @@ public class DeviceConnector extends Service {
         }
 
         // GET PAIRED DEVICES
-        availableDevices = new ArrayList<>();
+        availableDevices = new HashSet<>();
         for (BluetoothDevice btd : mBluetoothAdapter.getBondedDevices()) {
             availableDevices.add(btd);
         }
@@ -113,38 +125,114 @@ public class DeviceConnector extends Service {
      */
     private Thread pollDevicesThread = new Thread() {
 
+        int numConnections = 0;
         public void run() {
-            int length, i;
             while(true) {
-                if (connectedDevices.size() >= ANDROID_DEVICE_LIMIT) {
+
+                Log.d(TAG, "Discovering devices");
+                mBluetoothAdapter.startDiscovery();
+
+                try {
+                    Thread.sleep(DISCOVER_TIME);
+                } catch(InterruptedException ie) {
+                    Log.d(TAG, "Device is discoverable: " + mBluetoothAdapter.isDiscovering());
+                    Log.d(TAG, "Thread interrupted while in discovery");
+                    continue;
+                }
+                Log.d(TAG, "Device is discoverable: " + mBluetoothAdapter.isDiscovering());
+
+                numConnections = countConnections(connectedDevices);
+                if (numConnections >= ANDROID_DEVICE_LIMIT) {
+                    continue;
+                }
+                Log.d(TAG, "Number of devices connected: " + numConnections);
+
+                // Cancel discovery because it will slow down when we try to connect
+                mBluetoothAdapter.cancelDiscovery();
+//                Log.d(TAG, "Connecting to devices" + Util.deviceListToString(availableDevices));
+                for(BluetoothDevice btd : availableDevices) {
+
+                    if (!connectedDevices.containsKey(btd)) {
+                        ConnectThread t = new ConnectThread(btd, mBluetoothAdapter, BLUETOOTH_UUID, cHandler);
+
+                        t.start();
+                        connectedDevices.put(btd, new DeviceTriplet(btd, t, System.currentTimeMillis()));
+                    } else if (!connectedDevices.get(btd).isConnected() && shouldTimeout(connectedDevices.get(btd))) {
+                        Log.d(TAG, "Timing out device: " + btd.getAddress());
+                        connectedDevices.get(btd).thread.cancel();
+                        connectedDevices.remove(btd);
+                    }
+                }
+
+                try {
+                    Thread.sleep(CONNECT_TIME);
+                } catch(InterruptedException ie) {
+                    Log.d(TAG, "Thread interrupted while in connecting to devices");
                     continue;
                 }
 
-                length = availableDevices.size();
-                for(i = 0; i < length; i++) {
-                    if (!connectedDevices.contains(i)) {
-                        ConnectThread t = new ConnectThread(availableDevices.get(i), i, mBluetoothAdapter, BLUETOOTH_UUID, cHandler);
-                        t.start();
-                        connectedDevices.add(i);
-                    }
-                }
+//                Log.d(TAG, "Connected Devices: " + Util.deviceMapToString(connectedDevices));
             }
         }
     };
 
+    private int countConnections(HashMap<BluetoothDevice, DeviceTriplet> devices) {
+        int result = 0;
+        for (DeviceTriplet dvt : devices.values()) {
+            if (dvt.isConnected()) {
+                result += 1;
+            }
+        }
+
+        return result;
+    }
+
+    private Boolean shouldTimeout(DeviceTriplet dvt) {
+        return System.currentTimeMillis() - dvt.createTime > TIMEOUT_MILLIS;
+    }
+
     /**
-     * Add the device index to the list of connected devices
-     * then pass the data to main activity
+     * Change the connected flag to true for the device and
+     * then pass the opened socket to main activity
      */
     private Handler connectHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
             if (msg.what == 0) {
-                connectedDevices.add(msg.arg1);
-                cHandler.handleMessage(msg);
+                BluetoothDevice btd = ((BluetoothSocket) msg.obj).getRemoteDevice();
+                connectedDevices.get(btd).connect();
+                cHandler.sendMessage(msg);
             }
         }
     };
+
+    class DeviceTriplet {
+
+        private BluetoothDevice btd;
+        private ConnectThread thread;
+        private Long createTime;
+        private Boolean connected;
+
+        DeviceTriplet(BluetoothDevice device, ConnectThread t, Long time) {
+            btd = device;
+            thread = t;
+            createTime = time;
+            connected = false;
+        }
+
+        public void connect() {
+            connected = true;
+        }
+
+        public Boolean isConnected() {
+            return connected;
+        }
+
+        @Override
+        public String toString() {
+            return String.format("DeviceTriplet(mac:%s,createTime:%d,connected:%b)", btd.getAddress(), createTime, connected);
+        }
+    }
 
     /**
      * Binder so that the main activity can get an instance of this service

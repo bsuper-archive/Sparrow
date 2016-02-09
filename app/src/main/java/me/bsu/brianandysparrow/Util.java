@@ -5,6 +5,8 @@ import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashSet;
+import java.util.HashMap;
 
 /**
  * Created by aschmitt on 2/5/16.
@@ -20,7 +22,7 @@ public class Util {
      * @return
      */
     public static String deviceToString(BluetoothDevice device) {
-        return device.getName() + "\n" + device.getAddress();
+        return device.getAddress();
     }
 
     /**
@@ -29,13 +31,22 @@ public class Util {
      * @param bluDevices
      * @return
      */
-    public static String convertDevicesToString(List<BluetoothDevice> bluDevices) {
-        String devices = "";
+    public static String deviceListToString(HashSet<BluetoothDevice> bluDevices) {
+        String devices = "\n";
         for (BluetoothDevice device : bluDevices) {
-            devices += Util.deviceToString(device);
+            devices += Util.deviceToString(device) + "\n";
         }
         return devices;
     }
 
+    public static String deviceMapToString(HashMap<BluetoothDevice, DeviceConnector.DeviceTriplet> deviceMap) {
+        String result = "\n";
+
+        for (BluetoothDevice btd : deviceMap.keySet()) {
+            result += deviceToString(btd) + " - " + deviceMap.get(btd) + "\n";
+        }
+
+        return result;
+    }
 
 }

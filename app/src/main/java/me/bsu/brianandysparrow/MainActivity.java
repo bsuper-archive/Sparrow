@@ -236,7 +236,9 @@ public class MainActivity extends AppCompatActivity {
      * We can uniquely identify a connection by (mac address, UUID)
      */
     public void receiveData(ConnectedThread.ConnectionData dataObj) {
-
+        if (DEBUG) {
+            Log.d(TAG, "Data received");
+        }
         // Mac address of device on the other side of the connection
         String macAddress = dataObj.getMacAddress();
         UUID userUUID = dataObj.getParentThread().getUUID();
@@ -256,6 +258,7 @@ public class MainActivity extends AppCompatActivity {
     public void initiateHandshake(BluetoothSocket socket) {
         ConnectedThread openPort = new ConnectedThread(socket, dataReceivedHandler);
         openPort.start();
+        Log.d(TAG, "initiating handshake");
 
         //TODO: WRITE HANDSHAKE BYTES
     }
@@ -275,7 +278,6 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void handleMessage(Message msg) {
             if (msg.what == 0) {
-                Log.d(TAG, "starting tweet exchange");
                 initiateHandshake((BluetoothSocket) msg.obj);
             }
         }

@@ -37,7 +37,7 @@ class AcceptThread extends Thread {
     }
 
     public void run() {
-        Log.d(TAG, "Running accept thread");
+        Log.d(TAG, "Starting accept thread");
 
         BluetoothSocket socket = null;
         // Keep listening until exception occurs or a socket is returned
@@ -51,11 +51,10 @@ class AcceptThread extends Thread {
             // but then stay open so that we can accept more connections
             if (socket != null) {
 
-                Log.d(TAG, "connected to client");
+                Log.d(TAG, "connected to client: " + socket.getRemoteDevice().getAddress());
                 // Send the socket back to the main thread,
                 // pass -1 as position since this is a server connection
-                mHandler.obtainMessage(0, -1, 0, socket)
-                        .sendToTarget();
+                mHandler.obtainMessage(0, socket).sendToTarget();
             }
         }
     }
