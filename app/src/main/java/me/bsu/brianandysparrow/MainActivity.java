@@ -1,40 +1,32 @@
 package me.bsu.brianandysparrow;
 
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
-import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
-import android.hardware.usb.UsbDeviceConnection;
+import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-// For Handling other threads
-import android.os.Message;
-import android.os.Handler;
-
-// UTIL
-import java.util.UUID;
 import java.util.HashMap;
+import java.util.UUID;
 
+// For Handling other threads
+// UTIL
 // SERVICE
-import android.content.ServiceConnection;
-
 // Storing this users UUID
-import android.content.SharedPreferences;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -73,6 +65,10 @@ public class MainActivity extends AppCompatActivity {
     UUID MY_UUID = null;
     String MY_UUID_KEY = "USER_UUID_KEY";
 
+    // Our vector clock time
+    String MY_VC_TIME_KEY = "VC_TIME_KEY";
+    int MY_VECTOR_CLOCK_TIME = -1;
+
     // DEBUG MESSAGES
     Boolean DEBUG = true;
 
@@ -87,8 +83,8 @@ public class MainActivity extends AppCompatActivity {
 
         // Fetch our UUID if it exists
         SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
-        String uuidString = settings.getString(MY_UUID_KEY, null);
 
+        String uuidString = settings.getString(MY_UUID_KEY, null);
         if (uuidString == null) {
             if (DEBUG) {
                 Log.d(TAG, "Generating new uuid for user");
@@ -99,6 +95,14 @@ public class MainActivity extends AppCompatActivity {
             if (DEBUG) {
                 Log.d(TAG, "UUID for user already exists: " + MY_UUID);
             }
+        }
+
+        int vcTime = settings.getInt(MY_VC_TIME_KEY, -1);
+        // Fetch our current vector clock time
+        if (vcTime == -1) {
+            generateNewVCTime(settings);
+        } else {
+            MY_VECTOR_CLOCK_TIME = vcTime;
         }
 
         macAddressTextView = (TextView) findViewById(R.id.my_mac_address_text_view);
@@ -124,6 +128,16 @@ public class MainActivity extends AppCompatActivity {
         MY_UUID = UUID.randomUUID();
         SharedPreferences.Editor editor = prefs.edit();
         editor.putString(MY_UUID_KEY, MY_UUID.toString());
+        editor.commit();
+    }
+
+    /**
+     * Create a new vector clock time for the user
+     */
+    private void generateNewVCTime(SharedPreferences prefs) {
+        MY_VECTOR_CLOCK_TIME = 0;
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putInt(MY_VC_TIME_KEY, MY_VECTOR_CLOCK_TIME);
         editor.commit();
     }
 
