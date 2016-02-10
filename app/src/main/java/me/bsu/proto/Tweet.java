@@ -82,8 +82,7 @@ public final class Tweet extends Message<Tweet, Tweet.Builder> {
    */
   @WireField(
       tag = 5,
-      adapter = "com.squareup.wire.ProtoAdapter#STRING",
-      label = WireField.Label.REQUIRED
+      adapter = "com.squareup.wire.ProtoAdapter#STRING"
   )
   public final String sender_uuid;
 
@@ -232,12 +231,10 @@ public final class Tweet extends Message<Tweet, Tweet.Builder> {
     public Tweet build() {
       if (id == null
           || author == null
-          || content == null
-          || sender_uuid == null) {
+          || content == null) {
         throw Internal.missingRequiredFields(id, "id",
             author, "author",
-            content, "content",
-            sender_uuid, "sender_uuid");
+            content, "content");
       }
       return new Tweet(id, author, content, recipient, sender_uuid, vector_clocks, buildUnknownFields());
     }
@@ -254,7 +251,7 @@ public final class Tweet extends Message<Tweet, Tweet.Builder> {
           + ProtoAdapter.STRING.encodedSizeWithTag(2, value.author)
           + ProtoAdapter.STRING.encodedSizeWithTag(3, value.content)
           + (value.recipient != null ? ProtoAdapter.STRING.encodedSizeWithTag(4, value.recipient) : 0)
-          + ProtoAdapter.STRING.encodedSizeWithTag(5, value.sender_uuid)
+          + (value.sender_uuid != null ? ProtoAdapter.STRING.encodedSizeWithTag(5, value.sender_uuid) : 0)
           + VectorClockItem.ADAPTER.asRepeated().encodedSizeWithTag(6, value.vector_clocks)
           + value.unknownFields().size();
     }
@@ -265,7 +262,7 @@ public final class Tweet extends Message<Tweet, Tweet.Builder> {
       ProtoAdapter.STRING.encodeWithTag(writer, 2, value.author);
       ProtoAdapter.STRING.encodeWithTag(writer, 3, value.content);
       if (value.recipient != null) ProtoAdapter.STRING.encodeWithTag(writer, 4, value.recipient);
-      ProtoAdapter.STRING.encodeWithTag(writer, 5, value.sender_uuid);
+      if (value.sender_uuid != null) ProtoAdapter.STRING.encodeWithTag(writer, 5, value.sender_uuid);
       if (value.vector_clocks != null) VectorClockItem.ADAPTER.asRepeated().encodeWithTag(writer, 6, value.vector_clocks);
       writer.writeBytes(value.unknownFields());
     }
