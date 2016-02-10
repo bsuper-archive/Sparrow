@@ -7,6 +7,7 @@ import android.util.Log;
 import com.activeandroid.query.Delete;
 import com.activeandroid.query.Select;
 
+import java.util.Collections;
 import java.util.List;
 
 import me.bsu.brianandysparrow.models.DBTweet;
@@ -51,7 +52,7 @@ public class UnitTests extends AndroidTestCase {
         vc1a.save();
         vc1b.save();
 
-        DBTweet tweet2 = new DBTweet(1, "andy", "hello world", "", "bcd");
+        DBTweet tweet2 = new DBTweet(2, "andy", "hello world", "", "bcd");
         tweet2.save();
         DBVectorClockItem vc2a = new DBVectorClockItem("abc", 1, tweet2);
         DBVectorClockItem vc2b = new DBVectorClockItem("bcd", 3, tweet2);
@@ -68,6 +69,53 @@ public class UnitTests extends AndroidTestCase {
                 assertEquals("BCD should vector clock 3", 3, (int) vc.clock);
             }
         }
+    }
+
+    public void test4() throws Exception {
+        removeAllItemsFromDB();
+
+        Log.d(TAG, "====VC TEST====");
+        DBTweet tweet1 = new DBTweet(1, "brian", "hello world1", "", "brian");
+        tweet1.save();
+        DBVectorClockItem vc1a = new DBVectorClockItem("brian", 1, tweet1);
+        vc1a.save();
+
+        DBTweet tweet2 = new DBTweet(2, "andy", "hello world2", "brian", "andy");
+        tweet2.save();
+        DBVectorClockItem vc2a = new DBVectorClockItem("brian", 1, tweet2);
+        DBVectorClockItem vc2b = new DBVectorClockItem("andy", 2, tweet2);
+        vc2a.save();
+        vc2b.save();
+
+        DBTweet tweet3 = new DBTweet(3, "joe", "hello world3", "brian", "joe");
+        tweet3.save();
+        DBVectorClockItem vc3a = new DBVectorClockItem("joe", 2, tweet3);
+        DBVectorClockItem vc3b = new DBVectorClockItem("brian", 1, tweet3);
+        vc3a.save();
+        vc3b.save();
+
+        DBTweet tweet4 = new DBTweet(4, "brian", "hello world4", "", "brian");
+        tweet4.save();
+        DBVectorClockItem vc4a = new DBVectorClockItem("brian", 2, tweet4);
+        vc4a.save();
+
+        DBTweet tweet5 = new DBTweet(5, "andy", "hello world5", "", "andy");
+        tweet5.save();
+        DBVectorClockItem vc5a = new DBVectorClockItem("andy", 3, tweet5);
+        DBVectorClockItem vc5b = new DBVectorClockItem("brian", 1, tweet5);
+        DBVectorClockItem vc5c = new DBVectorClockItem("joe", 1, tweet5);
+        vc5a.save();
+        vc5b.save();
+        vc5c.save();
+
+        List<DBTweet> dbTweets = new Select().from(DBTweet.class).execute();
+        Collections.sort(dbTweets);
+
+        for (DBTweet t : dbTweets) {
+            Log.d(TAG, t.toString());
+        }
+
+        assertEquals(dbTweets.size(), 5);
     }
 
 
