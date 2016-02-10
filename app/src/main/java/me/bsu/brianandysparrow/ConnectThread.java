@@ -51,9 +51,9 @@ class ConnectThread extends Thread {
                 mmSocket.close();
             } catch (IOException closeException) { }
 
+            Log.d(TAG, "ERROR in connect thread for device: " + mmDevice.getAddress());
             // Notify main thread that we couldn't connect to the device
-            mHandler.obtainMessage(1, null)
-                    .sendToTarget();
+            mHandler.obtainMessage(1, mmDevice).sendToTarget();
             return;
         }
 

@@ -17,6 +17,7 @@ import android.os.Binder;
 import java.util.UUID;
 import java.util.HashSet;
 import java.util.HashMap;
+import java.util.Set;
 
 /**
  * Created by aschmitt on 2/3/16.
@@ -62,9 +63,9 @@ public class DeviceConnector extends Service {
     /**
      * Spawn a new thread that attempts to connect to new devices
      */
-    public void findDevices(Handler connectedHandler, Handler dataHandler, BluetoothAdapter adapter) {
+    public void findDevices(Handler handler, Handler dataHandler, BluetoothAdapter adapter) {
 
-        cHandler = connectedHandler;
+        cHandler = handler;
         dHandler = dataHandler;
         mBluetoothAdapter = adapter;
 
@@ -84,7 +85,7 @@ public class DeviceConnector extends Service {
         registerReceiver(mReceiver, filter); // Don't forget to unregister during onDestroy
 
         // START A SINGLE SERVER THREAD FROM OUR DEVICE
-        (new AcceptThread(mBluetoothAdapter, APP_NAME, BLUETOOTH_UUID, connectedHandler, this)).start();
+        (new AcceptThread(mBluetoothAdapter, APP_NAME, BLUETOOTH_UUID, connectHandler, this)).start();
 
         // START POLLING DEVICES
         pollDevicesThread.start();
@@ -107,6 +108,14 @@ public class DeviceConnector extends Service {
     /**
      * Loop over all devices forever and try to connect to them
      * Can only connect to 7 devices at a time
+     *
+     * The general flow is:
+     * - Wait for discovery to start.
+     * - discover for some time
+     * - cancel discovery and connect to devices
+     * - wait for time to connect
+     * - cancel threads that failed to connect
+     * - start again
      */
     private Thread pollDevicesThread = new Thread() {
 
@@ -138,9 +147,9 @@ public class DeviceConnector extends Service {
                 for(BluetoothDevice btd : availableDevices) {
 
                     if (!connectedDevices.containsKey(btd)) {
-                        ConnectThread t = new ConnectThread(btd, mBluetoothAdapter, BLUETOOTH_UUID, cHandler);
+                        ConnectThread t = new ConnectThread(btd, mBluetoothAdapter, BLUETOOTH_UUID, connectHandler);
                         t.start();
-                        addConnectedDevice(btd, t, false);
+                        addConnectedDevice(btd, t);
                     }
                 }
 
@@ -153,12 +162,14 @@ public class DeviceConnector extends Service {
 
                 // Before going back to discovery prune devices that are not currently connected
                 // and cancel their connections
-                for (BluetoothDevice btd : connectedDevices.keySet()) {
-                    if (!connectedDevices.get(btd).isConnected()) {
+                for (BluetoothDevice btd : availableDevices) {
+                    if (connectedDevices.containsKey(btd) && !connectedDevices.get(btd).isConnected()) {
                         Log.d(TAG, "Giving up on connection to: " + btd.getAddress());
                         closeConnection(btd);
                     }
                 }
+
+                Log.d(TAG, "Connected devices after pruning\n" + Utils.deviceMapToString(connectedDevices));
             }
 
             // If the loop ever breaks start everything over
@@ -171,8 +182,8 @@ public class DeviceConnector extends Service {
      * Add a connected thread to me.
      * Thread is null for connections where I am the server
      */
-    public void addConnectedDevice(BluetoothDevice btd, ConnectThread ct, Boolean isConnected) {
-        DeviceTriplet triplet = new DeviceTriplet(btd, ct, System.currentTimeMillis(), isConnected);
+    public void addConnectedDevice(BluetoothDevice btd, ConnectThread ct) {
+        DeviceTriplet triplet = new DeviceTriplet(btd, ct, System.currentTimeMillis());
         connectedDevices.put(btd, triplet);
     }
 
@@ -189,6 +200,14 @@ public class DeviceConnector extends Service {
         }
         connectedDevices.remove(btd);
     }
+
+    /**
+     * In the event that our server connection experiences an error we can restart it
+     */
+    private void restartAcceptThread() {
+        (new AcceptThread(mBluetoothAdapter, APP_NAME, BLUETOOTH_UUID, connectHandler, this)).start();
+    }
+
 
     /**
      * Returns the number of devices that we are currently connected to
@@ -224,10 +243,22 @@ public class DeviceConnector extends Service {
     private Handler connectHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
+
+            // We opened a connection, pass the socket to main acitivity
             if (msg.what == 0) {
                 BluetoothDevice btd = ((BluetoothSocket) msg.obj).getRemoteDevice();
                 connectedDevices.get(btd).connect();
-                cHandler.sendMessage(msg);
+                cHandler.obtainMessage(msg.what, msg.obj).sendToTarget();
+            }
+
+            // We were trying to connect as client and failed (see ConnectThread)
+            if (msg.what == 1) {
+                closeConnection((BluetoothDevice) msg.obj);
+            }
+
+            // Our server socket failed (see AcceptThread)
+            if (msg.what == 2) {
+                restartAcceptThread();
             }
         }
     };
@@ -242,11 +273,11 @@ public class DeviceConnector extends Service {
         private Long createTime;
         private Boolean connected;
 
-        DeviceTriplet(BluetoothDevice device, ConnectThread t, Long time, Boolean connected) {
+        DeviceTriplet(BluetoothDevice device, ConnectThread t, Long time) {
             btd = device;
             thread = t;
             createTime = time;
-            this.connected = connected;
+            connected = false;
         }
 
         public void connect() {

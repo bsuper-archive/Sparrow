@@ -45,6 +45,8 @@ class AcceptThread extends Thread {
             try {
                 socket = mmServerSocket.accept();
             } catch (IOException e) {
+                Log.d(TAG, "ERROR in accept thread");
+                mHandler.obtainMessage(2, null).sendToTarget();
                 break;
             }
             // If a connection was accepted pass the socket,
@@ -53,8 +55,7 @@ class AcceptThread extends Thread {
 
                 Log.d(TAG, "connected to client: " + socket.getRemoteDevice().getAddress());
 
-                // add the device to the parent thread since it might not have been added
-                parentThread.addConnectedDevice(socket.getRemoteDevice(), null, true);
+                parentThread.addConnectedDevice(socket.getRemoteDevice(), null);
 
                 // Send the socket back to the main thread,
                 // pass -1 as position since this is a server connection

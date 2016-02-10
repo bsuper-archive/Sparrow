@@ -358,6 +358,7 @@ public class MainActivity extends AppCompatActivity {
     Handler connectedHandler = new Handler(Looper.getMainLooper()) {
         @Override
         public void handleMessage(Message msg) {
+            // We got a good socket back
             if (msg.what == 0) {
                 initiateHandshake((BluetoothSocket) msg.obj);
             }

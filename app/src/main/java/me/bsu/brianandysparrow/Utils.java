@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.HashMap;
 
 import me.bsu.brianandysparrow.models.DBTweet;
 import me.bsu.brianandysparrow.models.DBVectorClockItem;
@@ -52,6 +53,16 @@ public class Utils {
             devices += Utils.deviceToString(device);
         }
         return devices;
+    }
+
+    public static String deviceMapToString(HashMap<BluetoothDevice, DeviceConnector.DeviceTriplet> deviceMap) {
+        String result = "\n";
+
+        for (BluetoothDevice btd : deviceMap.keySet()) {
+            result += deviceToString(btd) + " - " + deviceMap.get(btd) + "\n";
+        }
+
+        return result;
     }
 
     /**
