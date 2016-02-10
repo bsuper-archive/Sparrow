@@ -103,19 +103,10 @@ public class Utils {
 
         List <Tweet> tweets = new ArrayList<>();
         for (DBTweet dbTweet : dbTweets) {
-            Tweet tweet = new Tweet.Builder()
-                    .id(dbTweet.tweetID)
-                    .author(dbTweet.author)
-                    .content(dbTweet.content)
-                    .recipient(dbTweet.recipient)
-                    .sender_uuid(dbTweet.senderUUID)
-                    .vector_clocks(dbTweet.vectorClockItems())
-                    .build();
-            tweets.add(tweet);
+            tweets.add(dbTweet.createTweet());
         }
         return new TweetExchange.Builder().tweets(tweets).build();
     }
-
 
     public static List<VectorClockItem> createVectorClockArrayForNewMessage(Context context) {
         String myUUID = getOrCreateNewUUID(context).toString();

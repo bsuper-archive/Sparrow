@@ -36,4 +36,10 @@ public class DBVectorClockItem extends Model implements Comparable<DBVectorClock
     public int compareTo(DBVectorClockItem another) {
         return ((Integer) clock).compareTo(another.clock);
     }
+
+
+    @Override
+    public String toString() {
+        return String.format("VC - UUID: %s | Clock: %d", uuid, clock);
+    }
 }
