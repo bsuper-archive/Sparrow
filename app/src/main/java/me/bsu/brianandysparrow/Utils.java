@@ -7,6 +7,8 @@ import android.content.SharedPreferences;
 import com.activeandroid.query.Select;
 import com.activeandroid.util.SQLiteUtils;
 
+import java.io.DataInputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -50,6 +52,17 @@ public class Utils {
             devices += Utils.deviceToString(device);
         }
         return devices;
+    }
+
+    /**
+     * Read N bytes from the given input stream
+     */
+    public static byte[] readBytesFromStream(DataInputStream inStream, int n) throws IOException {
+        byte[] result = new byte[n];
+        for (int i = 0; i < n; ) {
+            i += inStream.read(result);
+        }
+        return result;
     }
 
     // SEND MESSAGES UTILS

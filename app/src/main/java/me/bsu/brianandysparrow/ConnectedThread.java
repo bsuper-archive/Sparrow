@@ -58,7 +58,7 @@ class ConnectedThread extends Thread {
             try {
                 // Read the length of the incoming data from the InputStream
                 bytes = mmInStream.readInt();
-                result = Util.readBytesFromStream(mmInStream, bytes);
+                result = Utils.readBytesFromStream(mmInStream, bytes);
 
                 // Send the obtained bytes to the UI activity
                 mHandler.obtainMessage(0, this.new ConnectionData(mmSocket, result))
