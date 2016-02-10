@@ -2,6 +2,7 @@ package me.bsu.brianandysparrow;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothSocket;
+import android.bluetooth.BluetoothDevice;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -20,13 +21,14 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.UUID;
+import java.util.List;
 
-// For Handling other threads
-// UTIL
-// SERVICE
-// Storing this users UUID
+import me.bsu.proto.Feature;
+import me.bsu.proto.Handshake;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -37,11 +39,14 @@ public class MainActivity extends AppCompatActivity {
     EditText messageEditText;
     Button sendMessageButton;
 
+
     // Bluetooth
+    private DeviceConnector deviceService;
     private ServiceConnection deviceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder binder) {
-            DeviceConnector deviceService = ((DeviceConnector.LocalBinder) binder).getInstance();
+            Log.d(TAG, "Device service connected");
+            deviceService = ((DeviceConnector.LocalBinder) binder).getInstance();
             deviceService.findDevices(connectedHandler, dataReceivedHandler, mBluetoothAdapter);
         }
 
@@ -50,15 +55,17 @@ public class MainActivity extends AppCompatActivity {
 //            Utils.sendMessage("Bluetooth Service Stopped", MainActivity.this.MY_UUID.toString());
         }
     };
-
     BluetoothAdapter mBluetoothAdapter;
     private boolean bluetoothReady = false;
 
-    // Track open connections by mapping mac addresses to users
-    private HashMap<String, UUID> openConnections = new HashMap<>();
+    // Track open connections by mapping mac addresses to the features that they have
+    private HashMap<String, ConnectedThread> openConnections = new HashMap<>();
 
     // This uniquely identifies our app on bluetooth connection
     UUID MY_UUID = null;
+
+    // Our supported features
+    private List<Feature> MY_FEATURES = Arrays.asList(Feature.BASIC, Feature.VECTOR_CLOCK);
 
     // DEBUG MESSAGES
     Boolean DEBUG = true;
@@ -78,8 +85,14 @@ public class MainActivity extends AppCompatActivity {
         String uuidString = settings.getString(Utils.MY_UUID_KEY, null);
         if (uuidString == null) {
             MY_UUID = Utils.generateNewUUID(settings);
+            if (DEBUG) {
+                Log.d(TAG, "Generating new uuid for user");
+            }
         } else {
             MY_UUID = UUID.fromString(uuidString);
+            if (DEBUG) {
+                Log.d(TAG, "UUID for user already exists: " + MY_UUID);
+            }
         }
 
 //        int vcTime = settings.getInt(Utils.MY_VC_TIME_KEY, -1);
@@ -100,18 +113,12 @@ public class MainActivity extends AppCompatActivity {
 //                Utils.sendMessage(msg, MainActivity.this.MY_UUID.toString());
             }
         });
+
+        // Start connecting to bluetooth
+        setupBluetooth();
     }
 
     //    private void assemble
-
-    /**
-     * Start the bluetooth service and make ourselves discoverable
-     */
-    private void bindDeviceService() {
-        mBluetoothAdapter.startDiscovery();
-        bindService(new Intent(this,
-                DeviceConnector.class), deviceConnection, Context.BIND_AUTO_CREATE);
-    }
 
     private void unbindDeviceService() {
         unbindService(deviceConnection);
@@ -150,6 +157,25 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Start the bluetooth service and make ourselves discoverable
+     */
+    private void bindDeviceService() {
+        if (DEBUG) {
+            Log.d(TAG, "Binding device service");
+
+        }
+        // MAKE US DISCOVERABLE
+        Intent discoverableIntent = new
+                Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
+        discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 0);
+        startActivity(discoverableIntent);
+        mBluetoothAdapter.startDiscovery();
+
+        bindService(new Intent(this,
+                DeviceConnector.class), deviceConnection, Context.BIND_AUTO_CREATE);
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -160,55 +186,168 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * Adds an entry to the table mapping macAddress to a userId and data pair
-     */
-    public void processHandshake(ConnectedThread.ConnectionData dataObj) {
-        //TODO: NEED PROTOBUFF CODE HERE FOR PARSING HANDSHAKE
-        //NOTE: WE ONLY READ 1024 BYTES INTO OUR BUFFER A TIME SO MESSAGES COULD GET CUT OFF
-    }
 
-    /**
-     * Should append the given data to the entry in openConnections
-     */
-    public void processData(UUID userUUID, byte[] data, int numBytes) {
-        //TODO: NEED PROTOBUFF CODE HERE FOR PARSING DATA
-        //NOTE: WE ONLY READ 1024 BYTES INTO OUR BUFFER A TIME SO MESSAGES COULD GET CUT OFF
-    }
-
-
-    /**
-     * Receive data.
-     * We can uniquely identify a connection by (mac address, UUID)
-     */
-    public void receiveData(ConnectedThread.ConnectionData dataObj) {
-
-        // Mac address of device on the other side of the connection
-        String macAddress = dataObj.getMacAddress();
-        UUID userUUID = dataObj.getParentThread().getUUID();
-        byte[] data = dataObj.getData();
-        int numBytesRead = dataObj.getNumBytes();
-
-        if (userUUID == null) {
-            processHandshake(dataObj);
-        } else {
-            processData(userUUID, data, numBytesRead);
-        }
-    }
+    /**********************************
+     * INITIATE AND RECEIVE HANDSHAKE *
+     **********************************/
 
     /**
      * Start a new thread to listen on this socket
+     * Send the handshake to the other device
      */
     public void initiateHandshake(BluetoothSocket socket) {
         ConnectedThread openPort = new ConnectedThread(socket, dataReceivedHandler);
         openPort.start();
+
+        Log.d(TAG, "initiating handshake");
+
+        Handshake handshakeMsg = new Handshake.Builder()
+                .uuid(MY_UUID.toString())
+                .features(MY_FEATURES)
+                .build();
+
+        byte[] handshakeBytes = Handshake.ADAPTER.encode(handshakeMsg);
+        openPort.writeInt(handshakeBytes.length);
+        openPort.write(handshakeBytes);
     }
 
     /**
-     * Send the tweets that we have to the other end
+     * Adds an entry to the table mapping mac address to the connection's thread
      */
-    public void sendTweets(ConnectedThread open) {
-        open.write("Hello world".getBytes());
+    public void receiveHandshake(ConnectedThread.ConnectionData dataObj) {
+        Handshake handshake = null;
+        ConnectedThread connection = dataObj.getConnection();
+        BluetoothDevice remoteDevice = connection.getSocket().getRemoteDevice();
+
+        try {
+            handshake = Handshake.ADAPTER.decode(dataObj.getData());
+        } catch (IOException io) {
+            Log.d(TAG, "Couldn't decode handshake from: " + remoteDevice.getAddress() + " dropping connection!");
+            removeConnection(connection);
+            return;
+        }
+
+        List<Feature> features = handshake.features;
+        if (!validFeatures(features)) {
+            Log.d(TAG, "Missing features. Invalid handshake from: " + remoteDevice.getAddress());
+            removeConnection(connection);
+        }
+
+        // Store the features in the connection. May not need this
+        connection.setFeatures(features);
+
+        Log.d(TAG, "Successfully decoded handhshake from: " + remoteDevice.getAddress());
+
+        String connectionID = connection.getID();
+
+        // Store the threadID and the thread itself for sending later
+        openConnections.put(connectionID, connection);
+
+        // Check if the device supports vector clocks
+        if (!supportsVC(handshake)) {
+            sendBasicExchange(connectionID);
+        }
+        UUID userUUID = UUID.fromString(handshake.uuid);
+        sendVCExchange(connectionID, userUUID);
+    }
+
+    /**
+     * Returns true iff the feature list provided by the handshake is valid
+     *
+     * @param features
+     * @return
+     */
+    private Boolean validFeatures(List<Feature> features) {
+        return (features.size() > 0) && (features.get(0) == Feature.BASIC);
+    }
+
+    /**
+     * Returns true iff the handshake has all the necessary parts for a VC exchange to occur
+     * @param handshake
+     * @return
+     */
+    private Boolean supportsVC(Handshake handshake) {
+        List<Feature> feats = handshake.features;
+        return (feats.size() > 1) && (feats.get(1) == Feature.VECTOR_CLOCK) && (handshake.uuid != null);
+    }
+
+    /***********************************
+     * SEND AND RECEIVE TWEET EXCHANGE *
+     ***********************************/
+
+    /**
+     * Should append the given data to the entry in openConnections
+     */
+    public void receiveTweetExchagne(ConnectedThread.ConnectionData dataObj) {
+        //TODO: NEED PROTOBUFF CODE HERE FOR PARSING DATA
+        //NOTE: WE ONLY READ 1024 BYTES INTO OUR BUFFER A TIME SO MESSAGES COULD GET CUT OFF
+        Log.d(TAG, "Receiving tweet exchange");
+        removeConnection(dataObj.getConnection());
+    }
+
+    /**
+     * Send all of our tweets to the other connection
+     *
+     * @param connectionID
+     */
+    public void sendBasicExchange(String connectionID) {
+        Log.d(TAG, "Sending basic tweet exchange to: " + connectionID);
+    }
+
+    /**
+     * Send our tweets to the other side using their VC to prune what messages need to be sent
+     *
+     * @param connectionID
+     * @param userUUID
+     */
+    public void sendVCExchange(String connectionID, UUID userUUID) {
+        Log.d(TAG, "Sending VC tweet exchange to: " + connectionID);
+    }
+
+    /*************************
+     * RECEIVE AND SEND DATA *
+     *************************/
+
+    /**
+     * Receive data
+     *
+     * @param dataObj
+     */
+    public void receiveData(ConnectedThread.ConnectionData dataObj) {
+        if (DEBUG) {
+            Log.d(TAG, "Data received");
+        }
+        // Mac address of device on the other side of the connection
+        String threadID = dataObj.getConnection().getID();
+
+        if (!openConnections.containsKey(threadID)) {
+            receiveHandshake(dataObj);
+        } else {
+            receiveTweetExchagne(dataObj);
+        }
+    }
+
+    /**
+     * Send a byte array of data to a particular open connection
+     *
+     * @param connectionID
+     * @param length
+     * @param data
+     */
+    public void sendData(String connectionID, int length, byte[] data) {
+        ConnectedThread target = openConnections.get(connectionID);
+        target.writeInt(length);
+        target.write(data);
+    }
+
+    /**
+     * Removes a connection from me and also closes the connection
+     *
+     * @param connection
+     */
+    private void removeConnection(ConnectedThread connection) {
+        deviceService.closeConnection(connection.getSocket().getRemoteDevice());
+        openConnections.remove(connection.getID());
     }
 
     /**
@@ -219,7 +358,6 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void handleMessage(Message msg) {
             if (msg.what == 0) {
-                Log.d(TAG, "starting tweet exchange");
                 initiateHandshake((BluetoothSocket) msg.obj);
             }
         }
