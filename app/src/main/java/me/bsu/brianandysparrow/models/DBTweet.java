@@ -7,6 +7,7 @@ import com.activeandroid.annotation.Table;
 import java.util.ArrayList;
 import java.util.List;
 
+import me.bsu.proto.Tweet;
 import me.bsu.proto.VectorClockItem;
 
 @Table(name = "DBTweets")
@@ -52,6 +53,18 @@ public class DBTweet extends Model implements Comparable<DBTweet> {
         return vcItems;
     }
 
+    public Tweet createTweet() {
+        Tweet tweet = new Tweet.Builder()
+                .id(tweetID)
+                .author(author)
+                .content(content)
+                .recipient(recipient)
+                .sender_uuid(senderUUID)
+                .vector_clocks(vectorClockItems())
+                .build();
+        return tweet;
+    }
+
     @Override
     public int compareTo(DBTweet tweet2) {
         List<DBVectorClockItem> vc1List = this.dbVectorClockItems();
@@ -76,5 +89,15 @@ public class DBTweet extends Model implements Comparable<DBTweet> {
         } else {
             return tweet1HasALowerEntry ? -1 : 1;
         }
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder vectorClockStringBuilder = new StringBuilder();
+        for (DBVectorClockItem vc : dbVectorClockItems()) {
+            vectorClockStringBuilder.append(String.format("\t%s\n", vc.toString()));
+        }
+        return String.format("Tweet - id: %d | author: %s | content: %s | recipient: %s | senderUUID: %s\nVectorClocks:\n%s",
+                tweetID, author, content, recipient, senderUUID, vectorClockStringBuilder.toString());
     }
 }

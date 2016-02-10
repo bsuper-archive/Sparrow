@@ -1,8 +1,8 @@
 package me.bsu.brianandysparrow;
 
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothSocket;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -24,8 +24,8 @@ import android.widget.Toast;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.UUID;
 import java.util.List;
+import java.util.UUID;
 
 import me.bsu.proto.Feature;
 import me.bsu.proto.Handshake;
@@ -117,6 +117,8 @@ public class MainActivity extends AppCompatActivity {
 
         // Start connecting to bluetooth
         setupBluetooth();
+
+        Tests.test1(this);
     }
 
     //    private void assemble
@@ -375,4 +377,5 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     };
+
 }
