@@ -117,13 +117,15 @@ public class DeviceConnector extends Service {
                 Log.d(TAG, "Discovering devices");
                 mBluetoothAdapter.startDiscovery();
 
+                // wait for device to start discovery
+                while (!mBluetoothAdapter.isDiscovering()) {}
+
                 try {
                     Thread.sleep(DISCOVER_TIME);
                 } catch(InterruptedException ie) {
                     Log.d(TAG, "Thread interrupted while in discovery");
                     break;
                 }
-                Log.d(TAG, "Device is discoverable: " + mBluetoothAdapter.isDiscovering());
 
                 numConnections = countConnections(connectedDevices);
                 if (numConnections >= ANDROID_DEVICE_LIMIT) {
@@ -133,16 +135,12 @@ public class DeviceConnector extends Service {
 
                 // Cancel discovery because it will slow down when we try to connect
                 mBluetoothAdapter.cancelDiscovery();
-//                Log.d(TAG, "Connecting to devices" + Util.deviceListToString(availableDevices));
                 for(BluetoothDevice btd : availableDevices) {
 
                     if (!connectedDevices.containsKey(btd)) {
                         ConnectThread t = new ConnectThread(btd, mBluetoothAdapter, BLUETOOTH_UUID, cHandler);
                         t.start();
-                        addConnectedDevice(btd, t);
-                    } else if (!connectedDevices.get(btd).isConnected() && shouldTimeout(connectedDevices.get(btd))) {
-                        Log.d(TAG, "Timing out device: " + btd.getAddress());
-                        closeConnection(btd);
+                        addConnectedDevice(btd, t, false);
                     }
                 }
 
@@ -153,10 +151,18 @@ public class DeviceConnector extends Service {
                     break;
                 }
 
-//                Log.d(TAG, "Connected Devices: " + Util.deviceMapToString(connectedDevices));
+                // Before going back to discovery prune devices that are not currently connected
+                // and cancel their connections
+                for (BluetoothDevice btd : connectedDevices.keySet()) {
+                    if (!connectedDevices.get(btd).isConnected()) {
+                        Log.d(TAG, "Giving up on connection to: " + btd.getAddress());
+                        closeConnection(btd);
+                    }
+                }
             }
 
             // If the loop ever breaks start everything over
+            Log.d(TAG, "ERROR ENCOUNTERED IN POLL DEVICES THREAD, FINDING DEVICES");
             findDevices(cHandler, dHandler, mBluetoothAdapter);
         }
     };
@@ -165,8 +171,8 @@ public class DeviceConnector extends Service {
      * Add a connected thread to me.
      * Thread is null for connections where I am the server
      */
-    public void addConnectedDevice(BluetoothDevice btd, ConnectThread ct) {
-        DeviceTriplet triplet = new DeviceTriplet(btd, ct, System.currentTimeMillis());
+    public void addConnectedDevice(BluetoothDevice btd, ConnectThread ct, Boolean isConnected) {
+        DeviceTriplet triplet = new DeviceTriplet(btd, ct, System.currentTimeMillis(), isConnected);
         connectedDevices.put(btd, triplet);
     }
 
@@ -236,11 +242,11 @@ public class DeviceConnector extends Service {
         private Long createTime;
         private Boolean connected;
 
-        DeviceTriplet(BluetoothDevice device, ConnectThread t, Long time) {
+        DeviceTriplet(BluetoothDevice device, ConnectThread t, Long time, Boolean connected) {
             btd = device;
             thread = t;
             createTime = time;
-            connected = false;
+            this.connected = connected;
         }
 
         public void connect() {

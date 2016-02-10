@@ -29,6 +29,7 @@ import java.util.List;
 
 import me.bsu.proto.Feature;
 import me.bsu.proto.Handshake;
+import me.bsu.proto.TweetExchange;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -231,6 +232,7 @@ public class MainActivity extends AppCompatActivity {
         if (!validFeatures(features)) {
             Log.d(TAG, "Missing features. Invalid handshake from: " + remoteDevice.getAddress());
             removeConnection(connection);
+            return;
         }
 
         // Store the features in the connection. May not need this
@@ -244,11 +246,8 @@ public class MainActivity extends AppCompatActivity {
         openConnections.put(connectionID, connection);
 
         // Check if the device supports vector clocks
-        if (!supportsVC(handshake)) {
-            sendBasicExchange(connectionID);
-        }
         UUID userUUID = UUID.fromString(handshake.uuid);
-        sendVCExchange(connectionID, userUUID);
+        sendTweetExchange(connectionID, userUUID);
     }
 
     /**
@@ -279,9 +278,18 @@ public class MainActivity extends AppCompatActivity {
      * Should append the given data to the entry in openConnections
      */
     public void receiveTweetExchagne(ConnectedThread.ConnectionData dataObj) {
-        //TODO: NEED PROTOBUFF CODE HERE FOR PARSING DATA
-        //NOTE: WE ONLY READ 1024 BYTES INTO OUR BUFFER A TIME SO MESSAGES COULD GET CUT OFF
-        Log.d(TAG, "Receiving tweet exchange");
+        ConnectedThread connection = dataObj.getConnection();
+        TweetExchange tweetEx = null;
+        try {
+            tweetEx = TweetExchange.ADAPTER.decode(dataObj.getData());
+        } catch (IOException e) {
+            Log.d(TAG, "Couldn't parse tweet exchange from: " + connection.getID());
+            removeConnection(connection);
+            return;
+        }
+
+        Log.d(TAG, "Successfully received tweet exchange from: " + connection.getID());
+        Utils.readTweetExchangeSaveTweetsInDB(tweetEx);
         removeConnection(dataObj.getConnection());
     }
 
@@ -290,18 +298,11 @@ public class MainActivity extends AppCompatActivity {
      *
      * @param connectionID
      */
-    public void sendBasicExchange(String connectionID) {
+    public void sendTweetExchange(String connectionID, UUID userUUID) {
         Log.d(TAG, "Sending basic tweet exchange to: " + connectionID);
-    }
-
-    /**
-     * Send our tweets to the other side using their VC to prune what messages need to be sent
-     *
-     * @param connectionID
-     * @param userUUID
-     */
-    public void sendVCExchange(String connectionID, UUID userUUID) {
-        Log.d(TAG, "Sending VC tweet exchange to: " + connectionID);
+        TweetExchange tweetEx = Utils.constructTweetExchangeWithAllTweets();
+        byte[] tweetExBytes = TweetExchange.ADAPTER.encode(tweetEx);
+        sendData(connectionID, tweetExBytes.length, tweetExBytes);
     }
 
     /*************************

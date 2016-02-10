@@ -54,10 +54,7 @@ public class Utils {
 
     // SEND MESSAGES UTILS
 
-    public static void constructNewTweet(Context context, String msg) {
-        int tweetID = 12412;
-        String author = "Brian";
-        String recipient = "";
+    public static void constructNewTweet(Context context, int tweetID, String author, String recipient, String msg) {
         String senderUUID = getOrCreateNewUUID(context).toString();
 
         // Construct database entry
@@ -76,7 +73,7 @@ public class Utils {
         }
     }
 
-    public static TweetExchange constructTweetExchangeWithLatestNTweets(int n) {
+    public static TweetExchange constructTweetExchangeWithAllTweets() {
         List<DBTweet> dbTweets = new Select().from(DBTweet.class).execute();
         Collections.sort(dbTweets);
 
