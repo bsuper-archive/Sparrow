@@ -38,6 +38,7 @@ public class DeviceConnector extends Service {
     private LocalBinder mIBinder;
     private HashMap<BluetoothDevice, DeviceTriplet> connectedDevices = new HashMap<>();
     private int ANDROID_DEVICE_LIMIT = 7;
+    private int ATTEMPT_LIMIT = 4;
     private UUID BLUETOOTH_UUID = UUID.fromString("9a74be0b-49c2-4a93-9dee-df037f822b4");
     private String APP_NAME = "GROUP-10-TWITTER-BT";
 
@@ -199,6 +200,7 @@ public class DeviceConnector extends Service {
             t.cancel();
         }
         connectedDevices.remove(btd);
+        return;
     }
 
     /**
@@ -249,11 +251,6 @@ public class DeviceConnector extends Service {
                 BluetoothDevice btd = ((BluetoothSocket) msg.obj).getRemoteDevice();
                 connectedDevices.get(btd).connect();
                 cHandler.obtainMessage(msg.what, msg.obj).sendToTarget();
-            }
-
-            // We were trying to connect as client and failed (see ConnectThread)
-            if (msg.what == 1) {
-                closeConnection((BluetoothDevice) msg.obj);
             }
 
             // Our server socket failed (see AcceptThread)
