@@ -14,6 +14,8 @@ import android.widget.Toast;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Binder;
+
+import java.util.Iterator;
 import java.util.UUID;
 import java.util.HashSet;
 import java.util.HashMap;
@@ -37,8 +39,7 @@ public class DeviceConnector extends Service {
     private Handler cHandler;
     private LocalBinder mIBinder;
     private HashMap<BluetoothDevice, DeviceTriplet> connectedDevices = new HashMap<>();
-    private int ANDROID_DEVICE_LIMIT = 7;
-    private int ATTEMPT_LIMIT = 4;
+    private int ANDROID_DEVICE_LIMIT = 5;
     private UUID BLUETOOTH_UUID = UUID.fromString("9a74be0b-49c2-4a93-9dee-df037f822b4");
     private String APP_NAME = "GROUP-10-TWITTER-BT";
 
@@ -145,32 +146,38 @@ public class DeviceConnector extends Service {
 
                 // Cancel discovery because it will slow down when we try to connect
                 mBluetoothAdapter.cancelDiscovery();
-                for(BluetoothDevice btd : availableDevices) {
+                Iterator<BluetoothDevice> devices = availableDevices.iterator();
+                BluetoothDevice btd;
+                while(devices.hasNext()) {
 
-                    if (!connectedDevices.containsKey(btd)) {
-                        ConnectThread t = new ConnectThread(btd, mBluetoothAdapter, BLUETOOTH_UUID, connectHandler);
-                        t.start();
-                        addConnectedDevice(btd, t);
+                    // Only try to connect to ANDROID_DEVICE_LIMIT devices at a time
+                    int numAttempts = 0;
+                    while (numAttempts < ANDROID_DEVICE_LIMIT && devices.hasNext()) {
+                        btd = devices.next();
+                        if (!connectedDevices.containsKey(btd)) {
+                            ConnectThread t = new ConnectThread(btd, mBluetoothAdapter, BLUETOOTH_UUID, connectHandler);
+                            t.start();
+                            addConnectedDevice(btd, t);
+                        }
+                        numAttempts += 1;
+                    }
+
+                    // Wait for devices to connect
+                    try {
+                        Thread.sleep(CONNECT_TIME);
+                    } catch (InterruptedException ie) {
+                        Log.d(TAG, "Thread interrupted while connecting to devices");
+                        break;
+                    }
+
+                    // Cancel the connections of devices that never connected
+                    for (BluetoothDevice device : availableDevices) {
+                        if (connectedDevices.containsKey(device) && !connectedDevices.get(device).isConnected()) {
+                            Log.d(TAG, "Giving up on connection to: " + device.getAddress());
+                            closeConnection(device);
+                        }
                     }
                 }
-
-                try {
-                    Thread.sleep(CONNECT_TIME);
-                } catch(InterruptedException ie) {
-                    Log.d(TAG, "Thread interrupted while connecting to devices");
-                    break;
-                }
-
-                // Before going back to discovery prune devices that are not currently connected
-                // and cancel their connections
-                for (BluetoothDevice btd : availableDevices) {
-                    if (connectedDevices.containsKey(btd) && !connectedDevices.get(btd).isConnected()) {
-                        Log.d(TAG, "Giving up on connection to: " + btd.getAddress());
-                        closeConnection(btd);
-                    }
-                }
-
-                Log.d(TAG, "Connected devices after pruning\n" + Utils.deviceMapToString(connectedDevices));
             }
 
             // If the loop ever breaks start everything over
