@@ -1,12 +1,10 @@
 package me.bsu.brianandysparrow;
 
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.bluetooth.BluetoothServerSocket;
 import android.util.Log;
 import android.os.Handler;
-import android.os.Message;
 
 import java.util.UUID;
 import java.io.IOException;
@@ -22,11 +20,13 @@ class AcceptThread extends Thread {
 
     private final BluetoothServerSocket mmServerSocket;
     private final Handler mHandler;
+    private final DeviceConnector parentThread;
 
-    public AcceptThread(BluetoothAdapter mBluetoothAdapter, String NAME, UUID uuid, Handler connectedHandler) {
+    public AcceptThread(BluetoothAdapter mBluetoothAdapter, String NAME, UUID uuid, Handler connectedHandler, DeviceConnector parent) {
         // Use a temporary object that is later assigned to mmServerSocket,
         // because mmServerSocket is final
         mHandler = connectedHandler;
+        parentThread = parent;
 
         BluetoothServerSocket tmp = null;
         try {
@@ -52,6 +52,10 @@ class AcceptThread extends Thread {
             if (socket != null) {
 
                 Log.d(TAG, "connected to client: " + socket.getRemoteDevice().getAddress());
+
+                // add the device to the parent thread since it might not have been added
+                parentThread.addConnectedDevice(socket.getRemoteDevice(), null);
+
                 // Send the socket back to the main thread,
                 // pass -1 as position since this is a server connection
                 mHandler.obtainMessage(0, socket).sendToTarget();

@@ -1,10 +1,9 @@
 package me.bsu.brianandysparrow;
 
 import android.bluetooth.BluetoothDevice;
-import android.util.Log;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.io.DataInputStream;
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.HashMap;
 
@@ -14,6 +13,16 @@ import java.util.HashMap;
 public class Util {
 
 
+    /**
+     * Read N bytes from the given input stream
+     */
+    public static byte[] readBytesFromStream(DataInputStream inStream, int n) throws IOException {
+        byte[] result = new byte[n];
+        for (int i = 0; i < n; ) {
+            i += inStream.read(result);
+        }
+        return result;
+    }
 
     /**
      * Returns a display string from a bluetooth device.
