@@ -5,7 +5,7 @@ import com.activeandroid.annotation.Column;
 import com.activeandroid.annotation.Table;
 
 @Table(name = "DBVectorClockItems")
-public class DBVectorClockItem extends Model {
+public class DBVectorClockItem extends Model implements Comparable<DBVectorClockItem> {
 
     @Column(name = "UUID")
     public String uuid;
@@ -30,5 +30,10 @@ public class DBVectorClockItem extends Model {
         this.uuid = uuid;
         this.clock = 0;
         this.dbTweet = dbTweet;
+    }
+
+    @Override
+    public int compareTo(DBVectorClockItem another) {
+        return ((Integer) clock).compareTo(another.clock);
     }
 }

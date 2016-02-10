@@ -32,9 +32,6 @@ public class MainActivity extends AppCompatActivity {
 
     public static final String TAG = "me.bsu.MainActivity";
 
-    // Shared preferences file
-    public static final String PREFS_NAME = "MyPrefsFile";
-
     // UI
     TextView macAddressTextView;
     EditText messageEditText;
@@ -50,7 +47,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
-            sendMessage("Bluetooth Service Stopped");
+//            Utils.sendMessage("Bluetooth Service Stopped", MainActivity.this.MY_UUID.toString());
         }
     };
 
@@ -62,11 +59,6 @@ public class MainActivity extends AppCompatActivity {
 
     // This uniquely identifies our app on bluetooth connection
     UUID MY_UUID = null;
-    String MY_UUID_KEY = "USER_UUID_KEY";
-
-    // Our vector clock time
-    String MY_VC_TIME_KEY = "VC_TIME_KEY";
-    int MY_VECTOR_CLOCK_TIME = -1;
 
     // DEBUG MESSAGES
     Boolean DEBUG = true;
@@ -81,22 +73,22 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         // Fetch our UUID if it exists
-        SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
+        SharedPreferences settings = getSharedPreferences(Utils.PREFS_NAME, 0);
 
-        String uuidString = settings.getString(MY_UUID_KEY, null);
+        String uuidString = settings.getString(Utils.MY_UUID_KEY, null);
         if (uuidString == null) {
-            generateNewUUID(settings);
+            MY_UUID = Utils.generateNewUUID(settings);
         } else {
             MY_UUID = UUID.fromString(uuidString);
         }
 
-        int vcTime = settings.getInt(MY_VC_TIME_KEY, -1);
-        // Fetch our current vector clock time
-        if (vcTime == -1) {
-            generateNewVCTime(settings);
-        } else {
-            MY_VECTOR_CLOCK_TIME = vcTime;
-        }
+//        int vcTime = settings.getInt(Utils.MY_VC_TIME_KEY, -1);
+//        // Fetch our current vector clock time
+//        if (vcTime == -1) {
+//            MY_VECTOR_CLOCK_TIME = Utils.generateNewVCTime(settings);
+//        } else {
+//            MY_VECTOR_CLOCK_TIME = vcTime;
+//        }
 
         macAddressTextView = (TextView) findViewById(R.id.my_mac_address_text_view);
         messageEditText = (EditText) findViewById(R.id.message_edittext);
@@ -105,35 +97,12 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 String msg = messageEditText.getText().toString();
-                sendMessage(msg);
+//                Utils.sendMessage(msg, MainActivity.this.MY_UUID.toString());
             }
         });
     }
 
-    /**
-     * Generate and store a new UUID for this user
-     * @param prefs
-     */
-    private void generateNewUUID(SharedPreferences prefs) {
-        MY_UUID = UUID.randomUUID();
-        SharedPreferences.Editor editor = prefs.edit();
-        editor.putString(MY_UUID_KEY, MY_UUID.toString());
-        editor.commit();
-    }
-
-    /**
-     * Create a new vector clock time for the user
-     */
-    private void generateNewVCTime(SharedPreferences prefs) {
-        MY_VECTOR_CLOCK_TIME = 0;
-        SharedPreferences.Editor editor = prefs.edit();
-        editor.putInt(MY_VC_TIME_KEY, MY_VECTOR_CLOCK_TIME);
-        editor.commit();
-    }
-
-    private void sendMessage(String msg) {
-        Toast.makeText(this, "Message Sent", Toast.LENGTH_SHORT).show();
-    }
+    //    private void assemble
 
     /**
      * Start the bluetooth service and make ourselves discoverable
@@ -190,10 +159,6 @@ public class MainActivity extends AppCompatActivity {
             setupBluetooth();
         }
     }
-
-    /*****************************
-     * RECEIVE AND SEND MESSAGES *
-     *****************************/
 
     /**
      * Adds an entry to the table mapping macAddress to a userId and data pair
