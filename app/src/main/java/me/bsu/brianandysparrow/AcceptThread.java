@@ -53,10 +53,16 @@ class AcceptThread extends Thread {
             // but then stay open so that we can accept more connections
             if (socket != null) {
 
-                Log.d(TAG, "connected to client: " + socket.getRemoteDevice().getAddress());
+                if (parentThread.deviceIsConnected(socket.getRemoteDevice())) {
+                    Log.d(TAG, "Device already connected as server. Closing socket...");
+                    try {
+                        socket.close();
+                    } catch (IOException e) {}
+                    continue;
+                }
 
                 parentThread.addConnectedDevice(socket.getRemoteDevice(), null);
-
+                Log.d(TAG, "connected to client: " + socket.getRemoteDevice().getAddress());
                 // Send the socket back to the main thread,
                 // pass -1 as position since this is a server connection
                 mHandler.obtainMessage(0, socket).sendToTarget();

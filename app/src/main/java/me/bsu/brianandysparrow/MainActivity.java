@@ -22,6 +22,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -58,6 +59,8 @@ public class MainActivity extends AppCompatActivity {
     };
     BluetoothAdapter mBluetoothAdapter;
     private boolean bluetoothReady = false;
+    private Handlers.ConnectedHandler connectedHandler;
+    private Handlers.DataHandler dataReceivedHandler;
 
     // Track open connections by mapping mac addresses to the features that they have
     private HashMap<String, ConnectedThread> openConnections = new HashMap<>();
@@ -140,6 +143,11 @@ public class MainActivity extends AppCompatActivity {
     private final static int REQUEST_ENABLE_BT = 1;
 
     private void setupBluetooth() {
+
+        // Instantiate Handlers to receive data from threads/service
+        connectedHandler = new Handlers.ConnectedHandler(this);
+        dataReceivedHandler = new Handlers.DataHandler(this);
+
         if (DEBUG) {
             Log.d(TAG, "Setting up bluetooth");
         }
@@ -286,6 +294,7 @@ public class MainActivity extends AppCompatActivity {
             tweetEx = TweetExchange.ADAPTER.decode(dataObj.getData());
         } catch (IOException e) {
             Log.d(TAG, "Couldn't parse tweet exchange from: " + connection.getID());
+            Log.d(TAG, "Found length: " + dataObj.getData().length);
             removeConnection(connection);
             return;
         }
@@ -304,7 +313,7 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "Sending basic tweet exchange to: " + connectionID);
         TweetExchange tweetEx = Utils.constructTweetExchangeWithAllTweets();
         byte[] tweetExBytes = TweetExchange.ADAPTER.encode(tweetEx);
-        sendData(connectionID, tweetExBytes.length, tweetExBytes);
+        sendData(connectionID, tweetExBytes);
     }
 
     /*************************
@@ -334,12 +343,12 @@ public class MainActivity extends AppCompatActivity {
      * Send a byte array of data to a particular open connection
      *
      * @param connectionID
-     * @param length
      * @param data
      */
-    public void sendData(String connectionID, int length, byte[] data) {
+    public void sendData(String connectionID, byte[] data) {
         ConnectedThread target = openConnections.get(connectionID);
-        target.writeInt(length);
+        Log.d(TAG, "Send tweet exchange with length: " + data.length);
+        target.writeInt(data.length);
         target.write(data);
     }
 
@@ -352,31 +361,4 @@ public class MainActivity extends AppCompatActivity {
         deviceService.closeConnection(connection.getSocket().getRemoteDevice());
         openConnections.remove(connection.getID());
     }
-
-    /**
-     * Called by either the accept or connect thread when a connection is established
-     * If success (what == 0) then msg.obj holds a connected bluetooth socket
-     */
-    Handler connectedHandler = new Handler(Looper.getMainLooper()) {
-        @Override
-        public void handleMessage(Message msg) {
-            // We got a good socket back
-            if (msg.what == 0) {
-                initiateHandshake((BluetoothSocket) msg.obj);
-            }
-        }
-    };
-
-    /**
-     * Called by the device service when it receives data on the open bluetooth socket
-     */
-    Handler dataReceivedHandler = new Handler(Looper.getMainLooper()) {
-        @Override
-        public void handleMessage(Message msg) {
-            if (msg.what == 0) {
-                receiveData((ConnectedThread.ConnectionData) msg.obj);
-            }
-        }
-    };
-
 }

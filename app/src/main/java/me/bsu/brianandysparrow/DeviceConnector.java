@@ -15,6 +15,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Binder;
 
+import java.lang.ref.WeakReference;
 import java.util.Iterator;
 import java.util.UUID;
 import java.util.HashSet;
@@ -36,12 +37,13 @@ public class DeviceConnector extends Service {
     private HashSet<BluetoothDevice> availableDevices;
     private Boolean DEBUG = true;
     private Handler dHandler;
-    private Handler cHandler;
+    Handler cHandler;
     private LocalBinder mIBinder;
     private HashMap<BluetoothDevice, DeviceTriplet> connectedDevices = new HashMap<>();
     private int ANDROID_DEVICE_LIMIT = 5;
     private UUID BLUETOOTH_UUID = UUID.fromString("9a74be0b-49c2-4a93-9dee-df037f822b4");
     private String APP_NAME = "GROUP-10-TWITTER-BT";
+    private Handlers.ServiceConnectHandler connectHandler;
 
     private Long TIMEOUT_MILLIS = new Long(40000); // 40 SECONDS
     private Long CONNECT_TIME = new Long(20000); // 20 SECONDS
@@ -70,6 +72,7 @@ public class DeviceConnector extends Service {
         cHandler = handler;
         dHandler = dataHandler;
         mBluetoothAdapter = adapter;
+        connectHandler = new Handlers.ServiceConnectHandler(this);
 
         if (DEBUG) {
             Log.d(TAG, "finding devices");
@@ -157,7 +160,7 @@ public class DeviceConnector extends Service {
                         if (!connectedDevices.containsKey(btd)) {
                             ConnectThread t = new ConnectThread(btd, mBluetoothAdapter, BLUETOOTH_UUID, connectHandler);
                             t.start();
-                            addConnectedDevice(btd, t);
+                            addDevice(btd, t);
                         }
                         numAttempts += 1;
                     }
@@ -190,9 +193,17 @@ public class DeviceConnector extends Service {
      * Add a connected thread to me.
      * Thread is null for connections where I am the server
      */
-    public void addConnectedDevice(BluetoothDevice btd, ConnectThread ct) {
+    public void addDevice(BluetoothDevice btd, ConnectThread ct) {
         DeviceTriplet triplet = new DeviceTriplet(btd, ct, System.currentTimeMillis());
         connectedDevices.put(btd, triplet);
+    }
+
+    public boolean deviceIsConnected(BluetoothDevice btd) {
+        return connectedDevices.containsKey(btd) && connectedDevices.get(btd).isConnected();
+    }
+
+    public void connectDevice(BluetoothDevice btd) {
+        connectedDevices.get(btd).connect();
     }
 
     /**
@@ -213,7 +224,7 @@ public class DeviceConnector extends Service {
     /**
      * In the event that our server connection experiences an error we can restart it
      */
-    private void restartAcceptThread() {
+    void restartAcceptThread() {
         (new AcceptThread(mBluetoothAdapter, APP_NAME, BLUETOOTH_UUID, connectHandler, this)).start();
     }
 
@@ -234,38 +245,6 @@ public class DeviceConnector extends Service {
 
         return result;
     }
-
-    /**
-     * Returns true iff a device connection should be timed out
-     *
-     * @param dvt
-     * @return
-     */
-    private Boolean shouldTimeout(DeviceTriplet dvt) {
-        return System.currentTimeMillis() - dvt.createTime > TIMEOUT_MILLIS;
-    }
-
-    /**
-     * Change the connected flag to true for the device and
-     * then pass the opened socket to main activity
-     */
-    private Handler connectHandler = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-
-            // We opened a connection, pass the socket to main acitivity
-            if (msg.what == 0) {
-                BluetoothDevice btd = ((BluetoothSocket) msg.obj).getRemoteDevice();
-                connectedDevices.get(btd).connect();
-                cHandler.obtainMessage(msg.what, msg.obj).sendToTarget();
-            }
-
-            // Our server socket failed (see AcceptThread)
-            if (msg.what == 2) {
-                restartAcceptThread();
-            }
-        }
-    };
 
     /**
      * A way to efficiently store info about a connecting thread
