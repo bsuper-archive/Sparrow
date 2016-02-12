@@ -2,6 +2,7 @@ package me.bsu.brianandysparrow;
 
 import android.bluetooth.BluetoothSocket;
 import android.os.Handler;
+import android.util.Log;
 
 import java.io.DataOutputStream;
 import java.io.DataInputStream;
@@ -20,6 +21,9 @@ import me.bsu.proto.Feature;
  * This is where we can potentially put all of the proto-buff code.
  */
 class ConnectedThread extends Thread {
+
+    private static String TAG = "me.bsu.ConnectedThread";
+
     private final BluetoothSocket mmSocket;
     private final DataInputStream mmInStream;
     private final DataOutputStream mmOutStream;
@@ -58,15 +62,21 @@ class ConnectedThread extends Thread {
             try {
                 // Read the length of the incoming data from the InputStream
                 bytes = mmInStream.readInt();
+                Log.d(TAG, "Read incoming data length as: " + bytes);
                 result = Utils.readBytesFromStream(mmInStream, bytes);
 
                 // Send the obtained bytes to the UI activity
                 mHandler.obtainMessage(0, this.new ConnectionData(mmSocket, result))
                         .sendToTarget();
             } catch (IOException e) {
+                Log.d(TAG, "Exception in connected Thread :(");
+                Log.d(TAG, e.getLocalizedMessage());
+                Log.d(TAG, e.getMessage());
                 break;
             }
         }
+
+        cancel();
     }
 
     /**
@@ -75,7 +85,8 @@ class ConnectedThread extends Thread {
     public void cancel() {
         try {
             mmSocket.close();
-        } catch (IOException e) { }
+        } catch (IOException e) { };
+        interrupt();
     }
 
     /**

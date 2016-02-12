@@ -44,10 +44,11 @@ public class DeviceConnector extends Service {
     private UUID BLUETOOTH_UUID = UUID.fromString("9a74be0b-49c2-4a93-9dee-df037f822b4");
     private String APP_NAME = "GROUP-10-TWITTER-BT";
     private Handlers.ServiceConnectHandler connectHandler;
+    private HashSet<BluetoothDevice> shouldClose = new HashSet<>();
 
-    private Long TIMEOUT_MILLIS = new Long(40000); // 40 SECONDS
-    private Long CONNECT_TIME = new Long(20000); // 20 SECONDS
-    private Long DISCOVER_TIME = new Long(15000); // 15 SECONDS
+    private Long TIMEOUT_TIME = new Long(50000); // 60 seconds
+    private Long CONNECT_TIME = new Long(30000); // 40 SECONDS
+    private Long DISCOVER_TIME = new Long(10000); // 10 SECONDS
 
     @Override
     public void onCreate() {
@@ -149,6 +150,11 @@ public class DeviceConnector extends Service {
 
                 // Cancel discovery because it will slow down when we try to connect
                 mBluetoothAdapter.cancelDiscovery();
+
+                //wait for discovery to end
+                while (mBluetoothAdapter.isDiscovering()) {};
+                Log.d(TAG, "Starting connections. Device is discovering: " + mBluetoothAdapter.isDiscovering());
+
                 Iterator<BluetoothDevice> devices = availableDevices.iterator();
                 BluetoothDevice btd;
                 while(devices.hasNext()) {
@@ -173,11 +179,26 @@ public class DeviceConnector extends Service {
                         break;
                     }
 
-                    // Cancel the connections of devices that never connected
+
                     for (BluetoothDevice device : availableDevices) {
+
+                        // Cancel connections that never connected
                         if (connectedDevices.containsKey(device) && !connectedDevices.get(device).isConnected()) {
                             Log.d(TAG, "Giving up on connection to: " + device.getAddress());
                             closeConnection(device);
+                        }
+
+                        // Cancel connections that have been open for too long
+                        if (connectedDevices.containsKey(device) && shouldTimeout(connectedDevices.get(device))) {
+                            Log.d(TAG, "Timing out bad connection to: " + device.getAddress());
+                            closeConnection(device);
+                        }
+
+                        // Cancel connections that we just exchanged data with
+                        if (shouldClose.contains(device)) {
+                            Log.d(TAG, "Closing successful connection to: " + device.getAddress());
+                            closeConnection(device);
+                            shouldClose.remove(device);
                         }
                     }
                 }
@@ -202,8 +223,20 @@ public class DeviceConnector extends Service {
         return connectedDevices.containsKey(btd) && connectedDevices.get(btd).isConnected();
     }
 
-    public void connectDevice(BluetoothDevice btd) {
-        connectedDevices.get(btd).connect();
+    public Boolean connectDevice(BluetoothDevice btd) {
+        if (connectedDevices.containsKey(btd)) {
+            connectedDevices.get(btd).connect();
+            return true;
+        }
+        return false;
+    }
+
+    public void addToClose(BluetoothDevice btd) {
+        shouldClose.add(btd);
+    }
+
+    private boolean shouldTimeout(DeviceTriplet dvt) {
+        return (System.currentTimeMillis() - dvt.createTime) >= TIMEOUT_TIME;
     }
 
     /**

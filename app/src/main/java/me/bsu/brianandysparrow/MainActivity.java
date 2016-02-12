@@ -293,6 +293,8 @@ public class MainActivity extends AppCompatActivity {
         try {
             tweetEx = TweetExchange.ADAPTER.decode(dataObj.getData());
         } catch (IOException e) {
+            Log.d(TAG, e.getLocalizedMessage());
+            Log.d(TAG, e.getMessage());
             Log.d(TAG, "Couldn't parse tweet exchange from: " + connection.getID());
             Log.d(TAG, "Found length: " + dataObj.getData().length);
             removeConnection(connection);
@@ -358,7 +360,7 @@ public class MainActivity extends AppCompatActivity {
      * @param connection
      */
     private void removeConnection(ConnectedThread connection) {
-        deviceService.closeConnection(connection.getSocket().getRemoteDevice());
+        deviceService.addToClose(connection.getSocket().getRemoteDevice());
         openConnections.remove(connection.getID());
     }
 }

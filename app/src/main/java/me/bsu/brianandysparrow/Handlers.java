@@ -6,6 +6,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 
+import java.io.IOException;
 import java.lang.ref.WeakReference;
 
 /**
@@ -87,9 +88,17 @@ public class Handlers {
                 if (msg.what == 0) {
                     BluetoothDevice btd = ((BluetoothSocket) msg.obj).getRemoteDevice();
 
-                    // only connect we aren't already connected
+                    // only connect if we aren't already connected
                     if (!parent.deviceIsConnected(btd)) {
-                        parent.connectDevice(btd);
+                        Boolean success = parent.connectDevice(btd);
+
+                        // stop connection from unknown device
+                        if (!success) {
+                            try {
+                                ((BluetoothSocket) msg.obj).close();
+                            } catch (IOException e) {};
+                            return;
+                        }
                         parent.cHandler.obtainMessage(msg.what, msg.obj).sendToTarget();
                     }
                 }
