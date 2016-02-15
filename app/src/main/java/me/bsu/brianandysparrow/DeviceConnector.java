@@ -2,6 +2,7 @@ package me.bsu.brianandysparrow;
 
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothClass;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
@@ -21,6 +22,7 @@ import java.util.UUID;
 import java.util.HashSet;
 import java.util.HashMap;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Created by aschmitt on 2/3/16.
@@ -39,16 +41,17 @@ public class DeviceConnector extends Service {
     private Handler dHandler;
     Handler cHandler;
     private LocalBinder mIBinder;
-    private HashMap<BluetoothDevice, DeviceTriplet> connectedDevices = new HashMap<>();
+    private ConcurrentHashMap<BluetoothDevice, DeviceTriplet> connectedDevices = new ConcurrentHashMap<>();
     private int ANDROID_DEVICE_LIMIT = 5;
     private UUID BLUETOOTH_UUID = UUID.fromString("9a74be0b-49c2-4a93-9dee-df037f822b4");
     private String APP_NAME = "GROUP-10-TWITTER-BT";
     private Handlers.ServiceConnectHandler connectHandler;
-    private HashSet<BluetoothDevice> shouldClose = new HashSet<>();
+    private HashMap<BluetoothDevice, ConnectedThread> shouldClose = new HashMap<>();
 
     private Long TIMEOUT_TIME = new Long(50000); // 60 seconds
-    private Long CONNECT_TIME = new Long(30000); // 40 SECONDS
+    private Long CONNECT_TIME = new Long(30000); // 30 SECONDS
     private Long DISCOVER_TIME = new Long(10000); // 10 SECONDS
+    private int CONNECT_ATTEMPTS = 2;
 
     @Override
     public void onCreate() {
@@ -62,6 +65,17 @@ public class DeviceConnector extends Service {
 
     @Override
     public void onDestroy() {
+        unregisterReceiver(mReceiver);
+
+        // Close all connections, kill all the threads
+        for (BluetoothDevice btd : connectedDevices.keySet()) {
+            if (shouldClose.containsKey(btd)) {
+                closeSuccessfulConnection(btd);
+            } else if (connectedDevices.containsKey(btd)) {
+                closeConnection(btd);
+            }
+        }
+
         Toast.makeText(this, "Service Destroyed", Toast.LENGTH_LONG).show();
     }
 
@@ -155,50 +169,51 @@ public class DeviceConnector extends Service {
                 while (mBluetoothAdapter.isDiscovering()) {};
                 Log.d(TAG, "Starting connections. Device is discovering: " + mBluetoothAdapter.isDiscovering());
 
-                Iterator<BluetoothDevice> devices = availableDevices.iterator();
-                BluetoothDevice btd;
-                while(devices.hasNext()) {
+                for (int i = 0; i < CONNECT_ATTEMPTS; i++) {
+                    Iterator<BluetoothDevice> devices = availableDevices.iterator();
+                    BluetoothDevice btd;
+                    while (devices.hasNext()) {
 
-                    // Only try to connect to ANDROID_DEVICE_LIMIT devices at a time
-                    int numAttempts = 0;
-                    while (numAttempts < ANDROID_DEVICE_LIMIT && devices.hasNext()) {
-                        btd = devices.next();
-                        if (!connectedDevices.containsKey(btd)) {
-                            ConnectThread t = new ConnectThread(btd, mBluetoothAdapter, BLUETOOTH_UUID, connectHandler);
-                            t.start();
-                            addDevice(btd, t);
-                        }
-                        numAttempts += 1;
-                    }
-
-                    // Wait for devices to connect
-                    try {
-                        Thread.sleep(CONNECT_TIME);
-                    } catch (InterruptedException ie) {
-                        Log.d(TAG, "Thread interrupted while connecting to devices");
-                        break;
-                    }
-
-
-                    for (BluetoothDevice device : availableDevices) {
-
-                        // Cancel connections that never connected
-                        if (connectedDevices.containsKey(device) && !connectedDevices.get(device).isConnected()) {
-                            Log.d(TAG, "Giving up on connection to: " + device.getAddress());
-                            closeConnection(device);
+                        // Only try to connect to ANDROID_DEVICE_LIMIT devices at a time
+                        int numAttempts = 0;
+                        while (numAttempts < ANDROID_DEVICE_LIMIT && devices.hasNext()) {
+                            btd = devices.next();
+                            if (!connectedDevices.containsKey(btd)) {
+                                ConnectThread t = new ConnectThread(btd, mBluetoothAdapter, BLUETOOTH_UUID, connectHandler);
+                                t.start();
+                                addDevice(btd, t);
+                            }
+                            numAttempts += 1;
                         }
 
-                        // Cancel connections that have been open for too long
-                        if (connectedDevices.containsKey(device) && shouldTimeout(connectedDevices.get(device))) {
-                            Log.d(TAG, "Timing out bad connection to: " + device.getAddress());
-                            closeConnection(device);
+                        // Wait for devices to connect
+                        try {
+                            Thread.sleep(CONNECT_TIME);
+                        } catch (InterruptedException ie) {
+                            Log.d(TAG, "Thread interrupted while connecting to devices");
+                            break;
                         }
 
-                        // Cancel connections that we just exchanged data with
-                        if (shouldClose.contains(device)) {
-                            Log.d(TAG, "Closing successful connection to: " + device.getAddress());
-                            closeConnection(device);
-                            shouldClose.remove(device);
+
+                        for (BluetoothDevice device : availableDevices) {
+
+                            // Cancel connections that we just exchanged data with
+                            if (shouldClose.containsKey(device)) {
+                                Log.d(TAG, "Closing successful connection to: " + device.getAddress());
+                                closeSuccessfulConnection(device);
+                            }
+
+                            // Cancel connections that never connected
+                            else if (connectedDevices.containsKey(device) && !connectedDevices.get(device).isConnected()) {
+                                Log.d(TAG, "Giving up on connection to: " + device.getAddress());
+                                closeConnection(device);
+                            }
+
+                            // Cancel connections that have been open for too long
+                            else if (connectedDevices.containsKey(device) && shouldTimeout(connectedDevices.get(device))) {
+                                Log.d(TAG, "Timing out bad connection to: " + device.getAddress());
+                                closeConnection(device);
+                            }
                         }
                     }
                 }
@@ -223,16 +238,22 @@ public class DeviceConnector extends Service {
         return connectedDevices.containsKey(btd) && connectedDevices.get(btd).isConnected();
     }
 
-    public Boolean connectDevice(BluetoothDevice btd) {
+    public void connectDevice(BluetoothDevice btd) {
+        Log.d(TAG, "In connect device");
         if (connectedDevices.containsKey(btd)) {
             connectedDevices.get(btd).connect();
-            return true;
         }
-        return false;
+
+        // If we connect as a server we may  need to create a new entry
+        else {
+            DeviceTriplet newDvt = new DeviceTriplet(btd, null, System.currentTimeMillis());
+            newDvt.connect();
+            connectedDevices.put(btd, newDvt);
+        }
     }
 
-    public void addToClose(BluetoothDevice btd) {
-        shouldClose.add(btd);
+    public void addToClose(ConnectedThread conn) {
+        shouldClose.put(conn.getSocket().getRemoteDevice(), conn);
     }
 
     private boolean shouldTimeout(DeviceTriplet dvt) {
@@ -251,7 +272,13 @@ public class DeviceConnector extends Service {
             t.cancel();
         }
         connectedDevices.remove(btd);
-        return;
+    }
+
+    public void closeSuccessfulConnection(BluetoothDevice btd) {
+        closeConnection(btd);
+        ConnectedThread conn = shouldClose.get(btd);
+        conn.cancel();
+        shouldClose.remove(btd);
     }
 
     /**
@@ -268,7 +295,7 @@ public class DeviceConnector extends Service {
      * @param devices
      * @return
      */
-    private int countConnections(HashMap<BluetoothDevice, DeviceTriplet> devices) {
+    private int countConnections(ConcurrentHashMap<BluetoothDevice, DeviceTriplet> devices) {
         int result = 0;
         for (DeviceTriplet dvt : devices.values()) {
             if (dvt.isConnected()) {

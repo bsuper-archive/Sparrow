@@ -61,6 +61,12 @@ public class Handlers {
                 if (msg.what == 0) {
                     parent.receiveData((ConnectedThread.ConnectionData) msg.obj);
                 }
+
+                // Unexpected error in connected thread, so close it and remove the connection
+                else if (msg.what == 1) {
+                    parent.removeConnection((ConnectedThread) msg.obj);
+                }
+
             } else {
                 Log.d(TAG, "Could not get main activity in DataHandler");
             }
@@ -81,34 +87,48 @@ public class Handlers {
         @Override
         public void handleMessage(Message msg) {
 
-            DeviceConnector parent = service.get();
+            synchronized (this) {
+                DeviceConnector parent = service.get();
 
-            if (parent != null) {
-                // We opened a connection, pass the socket to main acitivity
-                if (msg.what == 0) {
-                    BluetoothDevice btd = ((BluetoothSocket) msg.obj).getRemoteDevice();
+                if (parent != null) {
+                    // We opened a connection, pass the socket to main acitivity
+                    if (msg.what == 0) {
+                        BluetoothSocket socket = (BluetoothSocket) msg.obj;
+                        BluetoothDevice btd = socket.getRemoteDevice();
 
-                    // only connect if we aren't already connected
-                    if (!parent.deviceIsConnected(btd)) {
-                        Boolean success = parent.connectDevice(btd);
+                        if (!parent.deviceIsConnected(btd)) {
 
-                        // stop connection from unknown device
-                        if (!success) {
+                            parent.connectDevice(btd);
+                            Log.d(TAG, "Sending message to main activity");
+                            parent.cHandler.obtainMessage(msg.what, msg.obj).sendToTarget();
+                        } else {
                             try {
-                                ((BluetoothSocket) msg.obj).close();
-                            } catch (IOException e) {};
-                            return;
+                                socket.close();
+                            } catch (IOException e) {
+                                Log.d(TAG, "Failed to close unneeded socket to: " + btd.getAddress());
+                            }
                         }
-                        parent.cHandler.obtainMessage(msg.what, msg.obj).sendToTarget();
                     }
-                }
 
-                // Our server socket failed (see AcceptThread)
-                if (msg.what == 2) {
-                    parent.restartAcceptThread();
+                    // A client connect thread failed (see ConnectThread)
+                    // Only close the connection if we didn't also connect as a server
+                    else if (msg.what == 1) {
+                        BluetoothDevice device = (BluetoothDevice) msg.obj;
+                        if (!parent.deviceIsConnected(device)) {
+                            parent.closeConnection(device);
+                        }
+                    }
+
+                    // Our server socket failed (see AcceptThread)
+                    // Close the thread and restart it
+                    else if (msg.what == 2) {
+                        ((AcceptThread) msg.obj).cancel();
+                        parent.restartAcceptThread();
+                    }
+
+                } else {
+                    Log.d(TAG, "Couldn't get DeviceConnector in ServiceConnectorHandler");
                 }
-            } else {
-                Log.d(TAG, "Couldn't get DeviceConnector in ServiceConnectorHandler");
             }
         }
     }

@@ -3,7 +3,9 @@ package me.bsu.brianandysparrow;
 import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.util.Log;
 
+import com.activeandroid.query.Delete;
 import com.activeandroid.query.Select;
 import com.activeandroid.util.SQLiteUtils;
 
@@ -22,6 +24,8 @@ import me.bsu.proto.TweetExchange;
 import me.bsu.proto.VectorClockItem;
 
 public class Utils {
+
+    private static String TAG = "me.bsu.Utils";
 
     // Settings keys
     public static final String MY_UUID_KEY = "USER_UUID_KEY";
@@ -71,7 +75,7 @@ public class Utils {
     public static byte[] readBytesFromStream(DataInputStream inStream, int n) throws IOException {
         byte[] result = new byte[n];
         for (int i = 0; i < n; ) {
-            i += inStream.read(result);
+            i += inStream.read(result, i, n-i);
         }
         return result;
     }
@@ -104,6 +108,7 @@ public class Utils {
         List <Tweet> tweets = new ArrayList<>();
         for (DBTweet dbTweet : dbTweets) {
             tweets.add(dbTweet.createTweet());
+//            Log.d(TAG, dbTweet.toString());
         }
         return new TweetExchange.Builder().tweets(tweets).build();
     }
@@ -191,5 +196,12 @@ public class Utils {
         editor.putInt(MY_VC_TIME_KEY, 0);
         editor.commit();
         return 0;
+    }
+
+    public static void removeAllItemsFromDB() {
+        new Delete().from(DBVectorClockItem.class).execute();
+        new Delete().from(DBTweet.class).execute();
+//        SQLiteUtils.execSql("DROP TABLE DBVectorClockItems");
+//        SQLiteUtils.execSql("DROP TABLE DBTweets");
     }
 }

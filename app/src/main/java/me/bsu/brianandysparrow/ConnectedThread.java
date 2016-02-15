@@ -32,6 +32,7 @@ class ConnectedThread extends Thread {
     // Used for connections that support vector clocks
     private UUID userUUID = null;
     private List<Feature> features = null;
+    private Boolean canceled = false;
 
     public ConnectedThread(BluetoothSocket socket, Handler dataReceivedHandler) {
         mHandler = dataReceivedHandler;
@@ -58,6 +59,7 @@ class ConnectedThread extends Thread {
 
         // Keep listening to the InputStream until an exception occurs
         byte[] result;
+        String exceptMsg = "";
         while (true) {
             try {
                 // Read the length of the incoming data from the InputStream
@@ -69,21 +71,28 @@ class ConnectedThread extends Thread {
                 mHandler.obtainMessage(0, this.new ConnectionData(mmSocket, result))
                         .sendToTarget();
             } catch (IOException e) {
-                Log.d(TAG, "Exception in connected Thread :(");
-                Log.d(TAG, e.getLocalizedMessage());
-                Log.d(TAG, e.getMessage());
+                exceptMsg = e.getMessage();
                 break;
             }
         }
 
-        cancel();
+        // If not explicitly canceled, tell Main activity to remove this connection
+        if (!canceled) {
+            Log.d(TAG, "Exception in connect thread caused connection to be closed: " + macAddress);
+            Log.d(TAG, "ConnectedThread Exception: " + exceptMsg);
+            mHandler.obtainMessage(1, this).sendToTarget();
+        }
     }
 
     /**
      * Call this from the main activity to shutdown the connection
      * */
     public void cancel() {
+        Log.d(TAG, "Canceling connected thread: " + macAddress);
+        canceled = true;
         try {
+            mmOutStream.close();
+            mmInStream.close();
             mmSocket.close();
         } catch (IOException e) { };
         interrupt();
@@ -143,13 +152,19 @@ class ConnectedThread extends Thread {
     public void write(byte[] bytes) {
         try {
             mmOutStream.write(bytes);
-        } catch (IOException e) { }
+            mmOutStream.flush();
+        } catch (IOException e) {
+            Log.d(TAG, "Write exception write byte[] to: " + macAddress);
+        }
     }
 
     public void writeInt(int i) {
         try {
             mmOutStream.writeInt(i);
-        } catch(IOException e) { }
+            mmOutStream.flush();
+        } catch(IOException e) {
+            Log.d(TAG, "Write exception writeInt to: " + macAddress);
+        }
     }
 
 }

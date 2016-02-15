@@ -22,6 +22,7 @@ class ConnectThread extends Thread {
     private final BluetoothDevice mmDevice;
     private final BluetoothAdapter mBluetoothAdapter;
     private final Handler mHandler;
+    private boolean cancled = false;
 
     public ConnectThread(BluetoothDevice device, BluetoothAdapter adapter, UUID uuid, Handler connectionHandler) {
         // Use a temporary object that is later assigned to mmSocket,
@@ -39,25 +40,30 @@ class ConnectThread extends Thread {
     }
 
     public void run() {
-        Log.d(TAG, "Starting connect thread to device: " + mmDevice.getAddress());
 
         try {
             // Connect the device through the socket. This will block
             // until it succeeds or throws an exception
             mmSocket.connect();
         } catch (IOException connectException) {
-            // Unable to connect; close the socket and get out
-            cancel();
+            // Tell our parent to kill this thread if we weren't already explicitly canceled
+            if (!cancled) {
+                Log.d(TAG, "Error in connect thread for device: " + mmDevice.getAddress());
+                Log.d(TAG, connectException.getMessage());
+                mHandler.obtainMessage(1, mmDevice).sendToTarget();
+            }
             return;
         }
 
         // Send the socket back to the main thread
         Log.d(TAG, "connected to server: " + mmSocket.getRemoteDevice().getAddress());
         mHandler.obtainMessage(0, mmSocket).sendToTarget();
+        return;
     }
 
     /** Will cancel an in-progress connection, and close the socket */
     public void cancel() {
+        cancled = true;
         try {
             mmSocket.close();
         } catch (IOException e) { };

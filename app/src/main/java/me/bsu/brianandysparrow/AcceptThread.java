@@ -37,7 +37,6 @@ class AcceptThread extends Thread {
     }
 
     public void run() {
-        Log.d(TAG, "Starting accept thread");
 
         BluetoothSocket socket = null;
         // Keep listening until exception occurs or a socket is returned
@@ -46,8 +45,8 @@ class AcceptThread extends Thread {
                 socket = mmServerSocket.accept();
             } catch (IOException e) {
                 Log.d(TAG, "ERROR in accept thread");
-                mHandler.obtainMessage(2, null).sendToTarget();
-                break;
+                mHandler.obtainMessage(2, this).sendToTarget();
+                return;
             }
 
             // If a connection was accepted pass the socket,

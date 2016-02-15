@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
+import me.bsu.brianandysparrow.models.DBTweet;
 import me.bsu.proto.Feature;
 import me.bsu.proto.Handshake;
 import me.bsu.proto.TweetExchange;
@@ -61,6 +62,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean bluetoothReady = false;
     private Handlers.ConnectedHandler connectedHandler;
     private Handlers.DataHandler dataReceivedHandler;
+    private boolean deviceServiceBound = false;
 
     // Track open connections by mapping mac addresses to the features that they have
     private HashMap<String, ConnectedThread> openConnections = new HashMap<>();
@@ -99,6 +101,9 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+//        clearTweetsCreate1Test();
+//        return;
+
 //        int vcTime = settings.getInt(Utils.MY_VC_TIME_KEY, -1);
 //        // Fetch our current vector clock time
 //        if (vcTime == -1) {
@@ -118,21 +123,37 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Start connecting to bluetooth
         setupBluetooth();
-
-        Tests.test1(this);
     }
 
-    //    private void assemble
+    // For Testing
+    private void clearTweetsCreate1Test() {
+        Utils.removeAllItemsFromDB();
+        Log.d(TAG, "Removing all items");
+        DBTweet tweet4 = new DBTweet(4, "brian", "hello world4", "", "brian");
+        tweet4.save();
+
+        TweetExchange tweetEx = Utils.constructTweetExchangeWithAllTweets();
+
+        Log.d(TAG, "tweets in db: " + tweetEx.tweets);
+    }
 
     private void unbindDeviceService() {
-        unbindService(deviceConnection);
+        if (deviceServiceBound) {
+            unbindService(deviceConnection);
+            deviceServiceBound = false;
+        }
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
+
+        // tell the device service to close all of our connections
+        for (ConnectedThread conn : openConnections.values()) {
+            deviceService.addToClose(conn);
+        }
+
         unbindDeviceService();
     }
 
@@ -141,6 +162,7 @@ public class MainActivity extends AppCompatActivity {
      ************************************************/
 
     private final static int REQUEST_ENABLE_BT = 1;
+    private final static int REQUEST_ENABLE_DISCOVERY = 2;
 
     private void setupBluetooth() {
 
@@ -172,28 +194,33 @@ public class MainActivity extends AppCompatActivity {
      * Start the bluetooth service and make ourselves discoverable
      */
     private void bindDeviceService() {
-        if (DEBUG) {
-            Log.d(TAG, "Binding device service");
+        if (!deviceServiceBound) {
+            if (DEBUG) {
+                Log.d(TAG, "Binding device service");
 
+            }
+            // MAKE US DISCOVERABLE
+            Intent discoverableIntent = new
+                    Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
+            discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 0);
+            startActivityForResult(discoverableIntent, REQUEST_ENABLE_DISCOVERY);
         }
-        // MAKE US DISCOVERABLE
-        Intent discoverableIntent = new
-                Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
-        discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 0);
-        startActivity(discoverableIntent);
-        mBluetoothAdapter.startDiscovery();
-
-        bindService(new Intent(this,
-                DeviceConnector.class), deviceConnection, Context.BIND_AUTO_CREATE);
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        Toast.makeText(this, "Request Code: " + requestCode + " Result OK: " + (resultCode == RESULT_OK), Toast.LENGTH_SHORT).show();
+        Log.d(TAG, "On activity result called, request code: " + requestCode + ", result code: " + resultCode);
         if (requestCode == REQUEST_ENABLE_BT && resultCode == RESULT_OK) {
             bluetoothReady = true;
             setupBluetooth();
+        }
+
+        if (requestCode == REQUEST_ENABLE_DISCOVERY) {
+            Log.d(TAG, "Binding service");
+            bindService(new Intent(this,
+                    DeviceConnector.class), deviceConnection, Context.BIND_AUTO_CREATE);
+            deviceServiceBound = true;
         }
     }
 
@@ -270,16 +297,6 @@ public class MainActivity extends AppCompatActivity {
         return (features.size() > 0) && (features.get(0) == Feature.BASIC);
     }
 
-    /**
-     * Returns true iff the handshake has all the necessary parts for a VC exchange to occur
-     * @param handshake
-     * @return
-     */
-    private Boolean supportsVC(Handshake handshake) {
-        List<Feature> feats = handshake.features;
-        return (feats.size() > 1) && (feats.get(1) == Feature.VECTOR_CLOCK) && (handshake.uuid != null);
-    }
-
     /***********************************
      * SEND AND RECEIVE TWEET EXCHANGE *
      ***********************************/
@@ -297,6 +314,7 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, e.getMessage());
             Log.d(TAG, "Couldn't parse tweet exchange from: " + connection.getID());
             Log.d(TAG, "Found length: " + dataObj.getData().length);
+            Log.d(TAG, "Found data: \n" + Arrays.toString(dataObj.getData()));
             removeConnection(connection);
             return;
         }
@@ -350,6 +368,7 @@ public class MainActivity extends AppCompatActivity {
     public void sendData(String connectionID, byte[] data) {
         ConnectedThread target = openConnections.get(connectionID);
         Log.d(TAG, "Send tweet exchange with length: " + data.length);
+        Log.d(TAG, "Data" + Arrays.toString(data));
         target.writeInt(data.length);
         target.write(data);
     }
@@ -359,8 +378,8 @@ public class MainActivity extends AppCompatActivity {
      *
      * @param connection
      */
-    private void removeConnection(ConnectedThread connection) {
-        deviceService.addToClose(connection.getSocket().getRemoteDevice());
+    void removeConnection(ConnectedThread connection) {
+        deviceService.addToClose(connection);
         openConnections.remove(connection.getID());
     }
 }
