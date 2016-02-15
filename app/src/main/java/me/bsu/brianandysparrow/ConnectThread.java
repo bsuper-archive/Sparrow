@@ -34,8 +34,10 @@ class ConnectThread extends Thread {
 
         // Get a BluetoothSocket to connect with the given BluetoothDevice
         try {
-            tmp = device.createRfcommSocketToServiceRecord(uuid);
-        } catch (IOException e) { }
+            tmp = mmDevice.createRfcommSocketToServiceRecord(uuid);
+        } catch (IOException io) {
+            Log.d(TAG, "Could not open socket for: " + io.getMessage());
+        }
         mmSocket = tmp;
     }
 

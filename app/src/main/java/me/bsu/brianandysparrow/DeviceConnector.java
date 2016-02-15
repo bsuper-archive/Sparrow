@@ -49,7 +49,7 @@ public class DeviceConnector extends Service {
     private HashMap<BluetoothDevice, ConnectedThread> shouldClose = new HashMap<>();
 
     private Long TIMEOUT_TIME = new Long(50000); // 60 seconds
-    private Long CONNECT_TIME = new Long(30000); // 30 SECONDS
+    private Long CONNECT_TIME = new Long(35000); // 35 SECONDS
     private Long DISCOVER_TIME = new Long(10000); // 10 SECONDS
     private int CONNECT_ATTEMPTS = 2;
 
