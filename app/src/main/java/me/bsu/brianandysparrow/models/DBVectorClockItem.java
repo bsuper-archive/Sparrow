@@ -10,7 +10,7 @@ import com.activeandroid.annotation.Table;
 @Table(name = "DBVectorClockItems")
 public class DBVectorClockItem extends Model implements Comparable<DBVectorClockItem> {
 
-    @Column(name = "UUID")
+    @Column(name = "UUID", unique = true, onUniqueConflict = Column.ConflictAction.REPLACE)
     public String uuid;
 
     @Column(name = "clock")

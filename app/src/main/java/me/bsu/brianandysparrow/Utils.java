@@ -21,6 +21,7 @@ import java.util.UUID;
 
 import me.bsu.brianandysparrow.models.DBTweet;
 import me.bsu.brianandysparrow.models.DBVectorClockItem;
+import me.bsu.brianandysparrow.models.UsersWithEncryption;
 import me.bsu.proto.Tweet;
 import me.bsu.proto.TweetExchange;
 import me.bsu.proto.VectorClockItem;
@@ -313,6 +314,28 @@ public class Utils {
     /************************************************
      *
      *
+     * ENCRYPTION UTILS
+     *
+     *
+     ************************************************/
+
+    public static boolean checkIfUserAcceptsEncryption(String username, String uuid) {
+        return new Select()
+                .from(UsersWithEncryption.class)
+                .where("username = ?", username)
+                .where("uuid = ?", uuid)
+                .execute()
+                .size() > 0;
+    }
+
+    public static boolean markUserAcceptsEncryption(String username, String uuid, String publicKey) {
+        new UsersWithEncryption(username, uuid, publicKey).save();
+        return true;
+    }
+
+    /************************************************
+     *
+     *
      * OTHER UTIL METHODS
      *
      *
@@ -346,4 +369,6 @@ public class Utils {
         }
         return result;
     }
+
+
 }
