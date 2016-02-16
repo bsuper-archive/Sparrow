@@ -197,7 +197,7 @@ public class Utils {
     public static void constructNewTweet(Context context, String recipient, String msg) {
         Log.d(TAG, "Message is: " + msg);
         incrementVCTime(context);
-        constructNewTweet(context, new Random().nextInt(), Utils.getOrCreateNewUUID(context).toString(), recipient, msg);
+        constructNewTweet(context, new Random().nextInt(), Utils.getUsername(context), recipient, msg);
     }
 
     /**
