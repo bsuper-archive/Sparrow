@@ -114,7 +114,7 @@ public class CryptoUtils {
     }
 
     static byte[] getAESResult(byte[] data, Key key, Boolean encrypt) throws Exception {
-        AlgorithmParameterSpec iv = new IvParameterSpec("ASDFASDFKLJASLASDF".getBytes()); // this could be randomized
+        AlgorithmParameterSpec iv = new IvParameterSpec("ASDFASDFKLJASLASDFASDFASDFASDFLKASDFASDFASDFASDASDFASDFJHHJHJASDFIEW".getBytes()); // this could be randomized for extra security, but eh
         int mode = (encrypt ? Cipher.ENCRYPT_MODE : Cipher.DECRYPT_MODE);
         byte[] result = null;
         AESCipher.init(mode, key, iv);
