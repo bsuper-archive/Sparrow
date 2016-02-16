@@ -76,16 +76,16 @@ public class CryptoUtils {
      * AES Encryption for data blocks *
      **********************************/
 
-    static byte[] encryptData(byte[] data, PublicKey pubKey) {
-        return getAESResult(data, pubKey, true);
+    static byte[] encryptData(byte[] data, Key key) {
+        return getAESResult(data, key, true);
     }
 
-    static byte[] decryptData(byte[] data, PublicKey pubKey) {
-        return getAESResult(data, pubKey, false);
+    static byte[] decryptData(byte[] data, Key key) {
+        return getAESResult(data, key, false);
     }
 
-    static byte[] getAESResult(byte[] data, PublicKey pubKey, Boolean encrypt) {
-        AESCipher.init(encrypt, new KeyParameter(pubKey.getEncoded()));
+    static byte[] getAESResult(byte[] data, Key key, Boolean encrypt) {
+        AESCipher.init(encrypt, new KeyParameter(key.getEncoded()));
 
         byte[] result = new byte[data.length];
         int numBytesProcessed = AESCipher.processBlock(data, 0, result, data.length);
