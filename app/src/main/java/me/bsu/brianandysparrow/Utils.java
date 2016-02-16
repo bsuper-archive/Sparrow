@@ -20,8 +20,8 @@ import java.util.Random;
 import java.util.UUID;
 
 import me.bsu.brianandysparrow.models.DBTweet;
+import me.bsu.brianandysparrow.models.DBUser;
 import me.bsu.brianandysparrow.models.DBVectorClockItem;
-import me.bsu.brianandysparrow.models.UsersWithEncryption;
 import me.bsu.proto.Tweet;
 import me.bsu.proto.TweetExchange;
 import me.bsu.proto.VectorClockItem;
@@ -321,7 +321,7 @@ public class Utils {
 
     public static boolean checkIfUserAcceptsEncryption(String username, String uuid) {
         return new Select()
-                .from(UsersWithEncryption.class)
+                .from(DBUser.class)
                 .where("username = ?", username)
                 .where("uuid = ?", uuid)
                 .execute()
@@ -329,8 +329,17 @@ public class Utils {
     }
 
     public static boolean markUserAcceptsEncryption(String username, String uuid, String publicKey) {
-        new UsersWithEncryption(username, uuid, publicKey).save();
+        new DBUser(username, uuid, publicKey, true).save();
         return true;
+    }
+
+    public static List<String> getUsers() {
+        ArrayList<String> users = new ArrayList<>();
+        List<DBUser> dbUsers = new Select().from(DBUser.class).execute();
+        for (DBUser u : dbUsers) {
+            users.add(u.toString());
+        }
+        return users;
     }
 
     /************************************************

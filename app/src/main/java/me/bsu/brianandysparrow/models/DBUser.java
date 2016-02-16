@@ -4,8 +4,8 @@ import com.activeandroid.Model;
 import com.activeandroid.annotation.Column;
 import com.activeandroid.annotation.Table;
 
-@Table(name = "UsersWithEncryption")
-public class UsersWithEncryption extends Model {
+@Table(name = "DBUser")
+public class DBUser extends Model {
 
     @Column(name = "username")
     String username;
@@ -16,13 +16,21 @@ public class UsersWithEncryption extends Model {
     @Column(name = "public_key")
     String publicKey;
 
-    public UsersWithEncryption() {
+    @Column(name = "has_encryption")
+    boolean hasEncryption;
+
+    public DBUser() {
         super();
     }
 
-    public UsersWithEncryption(String username, String uuid, String publicKey) {
+    public DBUser(String username, String uuid, String publicKey, boolean hasEncryption) {
         this.username = username;
         this.uuid = uuid;
         this.publicKey = publicKey;
+        this.hasEncryption = hasEncryption;
+    }
+
+    public String toString() {
+        return String.format("%s (%s)", username, hasEncryption ? "encrypted" : "unencrypted");
     }
 }
