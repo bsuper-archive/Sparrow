@@ -27,6 +27,10 @@ public final class Handshake extends Message<Handshake, Handshake.Builder> {
 
   public static final String DEFAULT_UUID = "";
 
+  public static final String DEFAULT_USERNAME = "";
+
+  public static final String DEFAULT_PUBLIC_KEY = "";
+
   /**
    * A list of features that the sender of the message supports.
    */
@@ -43,19 +47,32 @@ public final class Handshake extends Message<Handshake, Handshake.Builder> {
    */
   @WireField(
       tag = 2,
-      adapter = "com.squareup.wire.ProtoAdapter#STRING",
-      label = WireField.Label.REQUIRED
+      adapter = "com.squareup.wire.ProtoAdapter#STRING"
   )
   public final String uuid;
 
-  public Handshake(List<Feature> features, String uuid) {
-    this(features, uuid, ByteString.EMPTY);
+  @WireField(
+      tag = 3,
+      adapter = "com.squareup.wire.ProtoAdapter#STRING"
+  )
+  public final String username;
+
+  @WireField(
+      tag = 4,
+      adapter = "com.squareup.wire.ProtoAdapter#STRING"
+  )
+  public final String public_key;
+
+  public Handshake(List<Feature> features, String uuid, String username, String public_key) {
+    this(features, uuid, username, public_key, ByteString.EMPTY);
   }
 
-  public Handshake(List<Feature> features, String uuid, ByteString unknownFields) {
+  public Handshake(List<Feature> features, String uuid, String username, String public_key, ByteString unknownFields) {
     super(ADAPTER, unknownFields);
     this.features = Internal.immutableCopyOf("features", features);
     this.uuid = uuid;
+    this.username = username;
+    this.public_key = public_key;
   }
 
   @Override
@@ -63,6 +80,8 @@ public final class Handshake extends Message<Handshake, Handshake.Builder> {
     Builder builder = new Builder();
     builder.features = Internal.copyOf("features", features);
     builder.uuid = uuid;
+    builder.username = username;
+    builder.public_key = public_key;
     builder.addUnknownFields(unknownFields());
     return builder;
   }
@@ -74,7 +93,9 @@ public final class Handshake extends Message<Handshake, Handshake.Builder> {
     Handshake o = (Handshake) other;
     return Internal.equals(unknownFields(), o.unknownFields())
         && Internal.equals(features, o.features)
-        && Internal.equals(uuid, o.uuid);
+        && Internal.equals(uuid, o.uuid)
+        && Internal.equals(username, o.username)
+        && Internal.equals(public_key, o.public_key);
   }
 
   @Override
@@ -84,6 +105,8 @@ public final class Handshake extends Message<Handshake, Handshake.Builder> {
       result = unknownFields().hashCode();
       result = result * 37 + (features != null ? features.hashCode() : 1);
       result = result * 37 + (uuid != null ? uuid.hashCode() : 0);
+      result = result * 37 + (username != null ? username.hashCode() : 0);
+      result = result * 37 + (public_key != null ? public_key.hashCode() : 0);
       super.hashCode = result;
     }
     return result;
@@ -94,6 +117,8 @@ public final class Handshake extends Message<Handshake, Handshake.Builder> {
     StringBuilder builder = new StringBuilder();
     if (features != null) builder.append(", features=").append(features);
     if (uuid != null) builder.append(", uuid=").append(uuid);
+    if (username != null) builder.append(", username=").append(username);
+    if (public_key != null) builder.append(", public_key=").append(public_key);
     return builder.replace(0, 2, "Handshake{").append('}').toString();
   }
 
@@ -101,6 +126,10 @@ public final class Handshake extends Message<Handshake, Handshake.Builder> {
     public List<Feature> features;
 
     public String uuid;
+
+    public String username;
+
+    public String public_key;
 
     public Builder() {
       features = Internal.newMutableList();
@@ -124,12 +153,19 @@ public final class Handshake extends Message<Handshake, Handshake.Builder> {
       return this;
     }
 
+    public Builder username(String username) {
+      this.username = username;
+      return this;
+    }
+
+    public Builder public_key(String public_key) {
+      this.public_key = public_key;
+      return this;
+    }
+
     @Override
     public Handshake build() {
-      if (uuid == null) {
-        throw Internal.missingRequiredFields(uuid, "uuid");
-      }
-      return new Handshake(features, uuid, buildUnknownFields());
+      return new Handshake(features, uuid, username, public_key, buildUnknownFields());
     }
   }
 
@@ -141,14 +177,18 @@ public final class Handshake extends Message<Handshake, Handshake.Builder> {
     @Override
     public int encodedSize(Handshake value) {
       return Feature.ADAPTER.asRepeated().encodedSizeWithTag(1, value.features)
-          + ProtoAdapter.STRING.encodedSizeWithTag(2, value.uuid)
+          + (value.uuid != null ? ProtoAdapter.STRING.encodedSizeWithTag(2, value.uuid) : 0)
+          + (value.username != null ? ProtoAdapter.STRING.encodedSizeWithTag(3, value.username) : 0)
+          + (value.public_key != null ? ProtoAdapter.STRING.encodedSizeWithTag(4, value.public_key) : 0)
           + value.unknownFields().size();
     }
 
     @Override
     public void encode(ProtoWriter writer, Handshake value) throws IOException {
       if (value.features != null) Feature.ADAPTER.asRepeated().encodeWithTag(writer, 1, value.features);
-      ProtoAdapter.STRING.encodeWithTag(writer, 2, value.uuid);
+      if (value.uuid != null) ProtoAdapter.STRING.encodeWithTag(writer, 2, value.uuid);
+      if (value.username != null) ProtoAdapter.STRING.encodeWithTag(writer, 3, value.username);
+      if (value.public_key != null) ProtoAdapter.STRING.encodeWithTag(writer, 4, value.public_key);
       writer.writeBytes(value.unknownFields());
     }
 
@@ -167,6 +207,8 @@ public final class Handshake extends Message<Handshake, Handshake.Builder> {
             break;
           }
           case 2: builder.uuid(ProtoAdapter.STRING.decode(reader)); break;
+          case 3: builder.username(ProtoAdapter.STRING.decode(reader)); break;
+          case 4: builder.public_key(ProtoAdapter.STRING.decode(reader)); break;
           default: {
             FieldEncoding fieldEncoding = reader.peekFieldEncoding();
             Object value = fieldEncoding.rawProtoAdapter().decode(reader);
