@@ -153,7 +153,7 @@ public class MainActivity extends AppCompatActivity {
 
         final MaterialDialog recipientDialog = new MaterialDialog.Builder(MainActivity.this)
                 .title("Choose a recipient")
-                .items(Utils.getUsers())
+                .items(Utils.getPossibleRecipients())
                 .itemsCallbackSingleChoice(-1, new MaterialDialog.ListCallbackSingleChoice() {
                     @Override
                     public boolean onSelection(MaterialDialog dialog, View view, int which, CharSequence text) {

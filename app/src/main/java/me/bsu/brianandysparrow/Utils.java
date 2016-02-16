@@ -345,6 +345,17 @@ public class Utils {
         return users;
     }
 
+    public static List<String> getPossibleRecipients() {
+        List<DBTweet> dbTweets = new Select().from(DBTweet.class).groupBy("author").execute();
+        ArrayList<String> recipients = new ArrayList<>();
+        recipients.add("All");
+        for (DBTweet d : dbTweets) {
+            Log.d(TAG, "Possible recipient: " + d.author);
+            recipients.add(d.author);
+        }
+        return recipients;
+    }
+
     /************************************************
      *
      *
