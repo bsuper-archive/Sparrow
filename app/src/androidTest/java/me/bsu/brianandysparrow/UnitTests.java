@@ -25,10 +25,16 @@ public class UnitTests extends AndroidTestCase {
         context = getContext();
     }
 
+    /**
+     * SIMPLE TEST TO MAKE SURE TEST IS WORKING
+     */
     public void test1() throws Exception {
         assertEquals(4, 2 + 2);
     }
 
+    /**
+     * BASIC VECTOR CLOCK TESTS
+     */
     public void test2() throws Exception {
         removeAllItemsFromDB();
 
@@ -42,6 +48,9 @@ public class UnitTests extends AndroidTestCase {
         assertEquals(1, new Select().from(DBTweet.class).execute().size());
     }
 
+    /**
+     * TESTS CREATING A VECTOR CLOCK ARRAY FOR NEW MESSAGE
+     */
     public void test3() throws Exception {
         removeAllItemsFromDB();
 
@@ -71,6 +80,9 @@ public class UnitTests extends AndroidTestCase {
         }
     }
 
+    /**
+     * TEST THE ORDERING OF VECTOR CLOCKS
+     */
     public void test4() throws Exception {
         removeAllItemsFromDB();
 

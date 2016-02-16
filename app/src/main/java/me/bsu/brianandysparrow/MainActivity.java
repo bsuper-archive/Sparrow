@@ -20,9 +20,6 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.afollestad.materialdialogs.DialogAction;
@@ -35,7 +32,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
-import me.bsu.brianandysparrow.models.DBTweet;
 import me.bsu.proto.Feature;
 import me.bsu.proto.Handshake;
 import me.bsu.proto.TweetExchange;
@@ -45,12 +41,8 @@ public class MainActivity extends AppCompatActivity {
     public static final String TAG = "me.bsu.MainActivity";
 
     // UI
-    TextView macAddressTextView;
-    EditText messageEditText;
-    Button sendMessageButton;
     FloatingActionButton fab;
     RecyclerView mRecyclerView;
-
 
     // Bluetooth
     private DeviceConnector deviceService;
@@ -88,9 +80,10 @@ public class MainActivity extends AppCompatActivity {
     // Fields for constructing a new message
     String recipient = "";
     String msg = "";
-    /********
-     * INIT *
-     ********/
+
+    /************************************************
+     * ACTIVITY LIFE CYCLE METHODS *
+     ************************************************/
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -172,52 +165,7 @@ public class MainActivity extends AppCompatActivity {
         mRecyclerView.setLayoutManager(layoutManager);
         refreshListView();
 
-//        clearTweetsCreate1Test();
-//        return;
-
-//        int vcTime = settings.getInt(Utils.MY_VC_TIME_KEY, -1);
-//        // Fetch our current vector clock time
-//        if (vcTime == -1) {
-//            MY_VECTOR_CLOCK_TIME = Utils.generateNewVCTime(settings);
-//        } else {
-//            MY_VECTOR_CLOCK_TIME = vcTime;
-//        }
-
-//        macAddressTextView = (TextView) findViewById(R.id.my_mac_address_text_view);
-//        messageEditText = (EditText) findViewById(R.id.message_edittext);
-//        sendMessageButton = (Button) findViewById(R.id.message_send_button);
-//        sendMessageButton.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View v) {
-//                String msg = messageEditText.getText().toString();
-////                Utils.sendMessage(msg, MainActivity.this.MY_UUID.toString());
-//            }
-//        });
-
         setupBluetooth();
-    }
-
-
-
-
-
-    // For Testing
-    private void clearTweetsCreate1Test() {
-        Utils.removeAllItemsFromDB();
-        Log.d(TAG, "Removing all items");
-        DBTweet tweet4 = new DBTweet(4, "brian", "hello world4", "", "brian");
-        tweet4.save();
-
-        TweetExchange tweetEx = Utils.constructTweetExchangeWithAllTweets();
-
-        Log.d(TAG, "tweets in db: " + tweetEx.tweets);
-    }
-
-    private void unbindDeviceService() {
-        if (deviceServiceBound) {
-            unbindService(deviceConnection);
-            deviceServiceBound = false;
-        }
     }
 
     @Override
@@ -230,6 +178,23 @@ public class MainActivity extends AppCompatActivity {
         }
 
         unbindDeviceService();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        Log.d(TAG, "On activity result called, request code: " + requestCode + ", result code: " + resultCode);
+        if (requestCode == REQUEST_ENABLE_BT && resultCode == RESULT_OK) {
+            bluetoothReady = true;
+            setupBluetooth();
+        }
+
+        if (requestCode == REQUEST_ENABLE_DISCOVERY) {
+            Log.d(TAG, "Binding service");
+            bindService(new Intent(this,
+                    DeviceConnector.class), deviceConnection, Context.BIND_AUTO_CREATE);
+            deviceServiceBound = true;
+        }
     }
 
     /************************************************
@@ -282,23 +247,12 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        Log.d(TAG, "On activity result called, request code: " + requestCode + ", result code: " + resultCode);
-        if (requestCode == REQUEST_ENABLE_BT && resultCode == RESULT_OK) {
-            bluetoothReady = true;
-            setupBluetooth();
-        }
-
-        if (requestCode == REQUEST_ENABLE_DISCOVERY) {
-            Log.d(TAG, "Binding service");
-            bindService(new Intent(this,
-                    DeviceConnector.class), deviceConnection, Context.BIND_AUTO_CREATE);
-            deviceServiceBound = true;
+    private void unbindDeviceService() {
+        if (deviceServiceBound) {
+            unbindService(deviceConnection);
+            deviceServiceBound = false;
         }
     }
-
 
     /**********************************
      * INITIATE AND RECEIVE HANDSHAKE *
@@ -379,7 +333,7 @@ public class MainActivity extends AppCompatActivity {
     /**
      * Should append the given data to the entry in openConnections
      */
-    public void receiveTweetExchagne(ConnectedThread.ConnectionData dataObj) {
+    public void receiveTweetExchange(ConnectedThread.ConnectionData dataObj) {
         ConnectedThread connection = dataObj.getConnection();
         TweetExchange tweetEx = null;
         try {
@@ -431,7 +385,7 @@ public class MainActivity extends AppCompatActivity {
         if (!openConnections.containsKey(threadID)) {
             receiveHandshake(dataObj);
         } else {
-            receiveTweetExchagne(dataObj);
+            receiveTweetExchange(dataObj);
         }
     }
 
@@ -459,9 +413,11 @@ public class MainActivity extends AppCompatActivity {
         openConnections.remove(connection.getID());
     }
 
-    // MENU
-    public boolean onCreateOptionsMenu(Menu menu)
-    {
+    /*************************
+     * MENU AND OTHER METHODS *
+     *************************/
+
+    public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.menu_main, menu);
         return true;

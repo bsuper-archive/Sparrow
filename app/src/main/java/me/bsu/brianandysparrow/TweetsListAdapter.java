@@ -10,10 +10,12 @@ import java.util.List;
 
 import me.bsu.brianandysparrow.models.DBTweet;
 
+/**
+ * Adapter used to populate the Recycler View from a list of DBTweets
+ */
 public class TweetsListAdapter extends RecyclerView.Adapter<TweetsListAdapter.ViewHolder> {
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
-        // each data item is just a string in this case
         public TextView mTweetContentTextView, mTweetSenderTextView;
         public ViewHolder(View v) {
             super(v);
@@ -29,7 +31,6 @@ public class TweetsListAdapter extends RecyclerView.Adapter<TweetsListAdapter.Vi
 
     @Override
     public TweetsListAdapter.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        // create a new view
         View v = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.list_item_message, parent, false);
 

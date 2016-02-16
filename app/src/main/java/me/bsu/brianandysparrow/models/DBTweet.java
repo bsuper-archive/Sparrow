@@ -10,6 +10,9 @@ import java.util.List;
 import me.bsu.proto.Tweet;
 import me.bsu.proto.VectorClockItem;
 
+/**
+ * DATABASE MODEL FOR TWEETS
+ */
 @Table(name = "DBTweets")
 public class DBTweet extends Model implements Comparable<DBTweet> {
 

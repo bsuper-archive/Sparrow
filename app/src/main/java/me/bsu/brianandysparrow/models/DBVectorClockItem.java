@@ -4,6 +4,9 @@ import com.activeandroid.Model;
 import com.activeandroid.annotation.Column;
 import com.activeandroid.annotation.Table;
 
+/**
+ * DATABASE MODEL FOR VECTOR CLOCK ITEMS
+ */
 @Table(name = "DBVectorClockItems")
 public class DBVectorClockItem extends Model implements Comparable<DBVectorClockItem> {
 
