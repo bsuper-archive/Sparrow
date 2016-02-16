@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
@@ -141,13 +142,25 @@ public class Utils {
     }
 
     public static void readTweetExchangeSaveTweetsInDB(TweetExchange te) {
+        HashMap<String, HashSet<Integer>> authorToIDs = new HashMap<>();
+        for (DBTweet d : getAllDbTweets()) {
+            if (!authorToIDs.containsKey(d.author)) {
+                authorToIDs.put(d.author, new HashSet<Integer>());
+            }
+            HashSet<Integer> h = authorToIDs.get(d.author);
+            h.add(d.tweetID);
+        }
         List<Tweet> tweets = te.tweets;
         for (Tweet t : tweets) {
-            DBTweet dbTweet = new DBTweet(t.id, t.author, t.content, t.recipient, t.sender_uuid);
-            dbTweet.save();
+            if (!authorToIDs.get(t.author).contains(t.id)) {
+                DBTweet dbTweet = new DBTweet(t.id, t.author, t.content, t.recipient, t.sender_uuid);
+                dbTweet.save();
 
-            for (VectorClockItem vc : t.vector_clocks) {
-                new DBVectorClockItem(vc.uuid, vc.clock, dbTweet).save();
+                for (VectorClockItem vc : t.vector_clocks) {
+                    new DBVectorClockItem(vc.uuid, vc.clock, dbTweet).save();
+                }
+            } else {
+                Log.d(TAG, "Already have message " + t.id + " from " + t.author);
             }
         }
     }

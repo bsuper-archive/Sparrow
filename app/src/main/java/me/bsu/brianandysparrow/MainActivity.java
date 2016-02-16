@@ -396,6 +396,7 @@ public class MainActivity extends AppCompatActivity {
 
         Log.d(TAG, "Successfully received tweet exchange from: " + connection.getID());
         Utils.readTweetExchangeSaveTweetsInDB(tweetEx);
+        refreshListView();
         removeConnection(dataObj.getConnection());
     }
 
