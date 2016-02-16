@@ -106,8 +106,6 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-
-
         final MaterialDialog msgContent = new MaterialDialog.Builder(MainActivity.this)
                 .title("Enter message text")
                 .inputType(InputType.TYPE_CLASS_TEXT)

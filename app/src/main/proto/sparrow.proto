@@ -25,6 +25,7 @@ message Handshake {
   // FILL IN (IF NEEDED)
   optional string uuid = 2;
   optional string username = 3;
+  optional string public_key = 4;
 }
 
 // A single message.  Can be either public or private.
