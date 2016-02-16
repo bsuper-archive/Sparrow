@@ -59,7 +59,7 @@ public class UnitTests extends AndroidTestCase {
         vc2a.save();
         vc2b.save();
 
-        List<VectorClockItem> newVectorClockItems = DbUtil.createVectorClockArrayForNewMessage(context);
+        List<VectorClockItem> newVectorClockItems = Utils.createVectorClockArrayForNewMessage(context);
         assertEquals("There should only be 2 vector clocks", (int) 2, newVectorClockItems.size());
         for (VectorClockItem vc : newVectorClockItems) {
             if (vc.uuid.equals("abc")) {
