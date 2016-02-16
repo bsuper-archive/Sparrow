@@ -42,7 +42,7 @@ public class TweetsListAdapter extends RecyclerView.Adapter<TweetsListAdapter.Vi
     public void onBindViewHolder(TweetsListAdapter.ViewHolder holder, int position) {
         DBTweet t = dbTweets.get(position);
         holder.mTweetContentTextView.setText(t.content);
-        holder.mTweetSenderTextView.setText(t.author);
+        holder.mTweetSenderTextView.setText(String.format("%s -> %s", t.author, t.recipient.length() == 0 ? "ALL" : t.recipient));
     }
 
     @Override
