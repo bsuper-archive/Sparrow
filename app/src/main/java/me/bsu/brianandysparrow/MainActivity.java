@@ -86,11 +86,11 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         // Fetch our UUID if it exists
-        SharedPreferences settings = getSharedPreferences(Utils.PREFS_NAME, 0);
+        SharedPreferences settings = getSharedPreferences(DbUtil.PREFS_NAME, 0);
 
-        String uuidString = settings.getString(Utils.MY_UUID_KEY, null);
+        String uuidString = settings.getString(DbUtil.MY_UUID_KEY, null);
         if (uuidString == null) {
-            MY_UUID = Utils.generateNewUUID(settings);
+            MY_UUID = DbUtil.generateNewUUID(settings);
             if (DEBUG) {
                 Log.d(TAG, "Generating new uuid for user");
             }
@@ -128,12 +128,12 @@ public class MainActivity extends AppCompatActivity {
 
     // For Testing
     private void clearTweetsCreate1Test() {
-        Utils.removeAllItemsFromDB();
+        DbUtil.removeAllItemsFromDB();
         Log.d(TAG, "Removing all items");
         DBTweet tweet4 = new DBTweet(4, "brian", "hello world4", "", "brian");
         tweet4.save();
 
-        TweetExchange tweetEx = Utils.constructTweetExchangeWithAllTweets();
+        TweetExchange tweetEx = DbUtil.constructTweetExchangeWithAllTweets();
 
         Log.d(TAG, "tweets in db: " + tweetEx.tweets);
     }
@@ -320,7 +320,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         Log.d(TAG, "Successfully received tweet exchange from: " + connection.getID());
-        Utils.readTweetExchangeSaveTweetsInDB(tweetEx);
+        DbUtil.readTweetExchangeSaveTweetsInDB(tweetEx);
         removeConnection(dataObj.getConnection());
     }
 
@@ -331,7 +331,7 @@ public class MainActivity extends AppCompatActivity {
      */
     public void sendTweetExchange(String connectionID, UUID userUUID) {
         Log.d(TAG, "Sending basic tweet exchange to: " + connectionID);
-        TweetExchange tweetEx = Utils.constructTweetExchangeWithAllTweets();
+        TweetExchange tweetEx = DbUtil.constructTweetExchangeWithAllTweets();
         byte[] tweetExBytes = TweetExchange.ADAPTER.encode(tweetEx);
         sendData(connectionID, tweetExBytes);
     }
