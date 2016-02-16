@@ -27,6 +27,7 @@ import java.security.KeyPair;
 import java.security.Key;
 import java.security.SecureRandom;
 import java.security.spec.AlgorithmParameterSpec;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 
 import javax.crypto.KeyGenerator;
@@ -82,6 +83,10 @@ public class CryptoUtils {
 
     static PublicKey stringToPublicKey(String str) throws Exception {
         return KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(Base64.decode(str, Base64.DEFAULT)));
+    }
+
+    static PrivateKey stringToPrivateKey(String str) throws Exception {
+        return KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(Base64.decode(str, Base64.DEFAULT)));
     }
 
     /***************************

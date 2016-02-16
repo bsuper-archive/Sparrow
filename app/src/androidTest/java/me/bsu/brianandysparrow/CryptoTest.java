@@ -79,10 +79,16 @@ public class CryptoTest extends AndroidTestCase {
     public void test3() throws Exception {
         KeyPair AsymKeyPair = CryptoUtils.generateRSAKeyPair();
         PublicKey pub = AsymKeyPair.getPublic();
+        PrivateKey priv = AsymKeyPair.getPrivate();
 
         String keyStr = CryptoUtils.keyToString(pub);
         PublicKey pubKey = CryptoUtils.stringToPublicKey(keyStr);
 
-        assertEquals("Key didn't match", pub, pubKey);
+        assertEquals("PublicKey didn't match", pub, pubKey);
+
+        keyStr = CryptoUtils.keyToString(priv);
+        PrivateKey privKey = CryptoUtils.stringToPrivateKey(keyStr);
+
+        assertEquals("PrivateKey didn't match", priv, privKey);
     }
 }
