@@ -128,7 +128,7 @@ public class MainActivity extends AppCompatActivity {
                 .onPositive(new MaterialDialog.SingleButtonCallback() {
                     @Override
                     public void onClick(@NonNull MaterialDialog dialog, @NonNull DialogAction which) {
-                        Utils.saveMessageToDB(MainActivity.this, "", dialog.getInputEditText().getText().toString());
+                        Utils.constructNewTweet(MainActivity.this, "", dialog.getInputEditText().getText().toString());
                         Utils.logAllTweetsInDB(MainActivity.this);
                         refreshListView();
                     }
