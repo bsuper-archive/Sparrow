@@ -9,20 +9,27 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Looper;
-import android.os.Message;
+import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
+import android.text.InputType;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.afollestad.materialdialogs.DialogAction;
+import com.afollestad.materialdialogs.MaterialDialog;
+import com.getbase.floatingactionbutton.FloatingActionButton;
+
 import java.io.IOException;
-import java.lang.ref.WeakReference;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -41,6 +48,8 @@ public class MainActivity extends AppCompatActivity {
     TextView macAddressTextView;
     EditText messageEditText;
     Button sendMessageButton;
+    FloatingActionButton fab;
+    RecyclerView mRecyclerView;
 
 
     // Bluetooth
@@ -76,6 +85,9 @@ public class MainActivity extends AppCompatActivity {
     // DEBUG MESSAGES
     Boolean DEBUG = true;
 
+    // Fields for constructing a new message
+    String recipient = "";
+    String msg = "";
     /********
      * INIT *
      ********/
@@ -83,7 +95,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_tweets);
 
         // Fetch our UUID if it exists
         SharedPreferences settings = getSharedPreferences(DbUtil.PREFS_NAME, 0);
@@ -101,6 +113,65 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+
+
+        final MaterialDialog msgContent = new MaterialDialog.Builder(MainActivity.this)
+                .title("Enter message text")
+                .inputType(InputType.TYPE_CLASS_TEXT)
+                .input("Message text", "", new MaterialDialog.InputCallback() {
+                    @Override
+                    public void onInput(MaterialDialog dialog, CharSequence input) {
+                        MainActivity.this.msg = input.toString();
+                        Log.d(TAG, "Entered msg: " + MainActivity.this.msg);
+                    }
+                })
+                .onPositive(new MaterialDialog.SingleButtonCallback() {
+                    @Override
+                    public void onClick(@NonNull MaterialDialog dialog, @NonNull DialogAction which) {
+                        Utils.saveMessageToDB(MainActivity.this, "", dialog.getInputEditText().getText().toString());
+                        Utils.logAllTweetsInDB(MainActivity.this);
+                        refreshListView();
+                    }
+                })
+                .positiveText("Send").build();
+
+        final MaterialDialog recipientDialog = new MaterialDialog.Builder(MainActivity.this)
+                .title("Choose a recipient")
+                .items(new String[]{"All"})
+                .itemsCallbackSingleChoice(-1, new MaterialDialog.ListCallbackSingleChoice() {
+                    @Override
+                    public boolean onSelection(MaterialDialog dialog, View view, int which, CharSequence text) {
+                        /**
+                         * If you use alwaysCallSingleChoiceCallback(), which is discussed below,
+                         * returning false here won't allow the newly selected radio button to actually be selected.
+                         **/
+                        return true;
+                    }
+                })
+                .positiveText("Next")
+                .autoDismiss(false)
+                .onPositive(new MaterialDialog.SingleButtonCallback() {
+                    @Override
+                    public void onClick(@NonNull MaterialDialog dialog, @NonNull DialogAction which) {
+                        Log.d(TAG, "Selected index: " + dialog.getSelectedIndex());
+                        msgContent.show();
+                        dialog.dismiss();
+                    }
+                })
+                .build();
+
+        fab = (FloatingActionButton) findViewById(R.id.new_tweet_fab);
+        fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                recipientDialog.show();
+            }
+        });
+        mRecyclerView = (RecyclerView) findViewById(R.id.tweets_recycler_view);
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
+        mRecyclerView.setLayoutManager(layoutManager);
+        refreshListView();
+
 //        clearTweetsCreate1Test();
 //        return;
 
@@ -112,19 +183,23 @@ public class MainActivity extends AppCompatActivity {
 //            MY_VECTOR_CLOCK_TIME = vcTime;
 //        }
 
-        macAddressTextView = (TextView) findViewById(R.id.my_mac_address_text_view);
-        messageEditText = (EditText) findViewById(R.id.message_edittext);
-        sendMessageButton = (Button) findViewById(R.id.message_send_button);
-        sendMessageButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String msg = messageEditText.getText().toString();
-//                Utils.sendMessage(msg, MainActivity.this.MY_UUID.toString());
-            }
-        });
+//        macAddressTextView = (TextView) findViewById(R.id.my_mac_address_text_view);
+//        messageEditText = (EditText) findViewById(R.id.message_edittext);
+//        sendMessageButton = (Button) findViewById(R.id.message_send_button);
+//        sendMessageButton.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                String msg = messageEditText.getText().toString();
+////                Utils.sendMessage(msg, MainActivity.this.MY_UUID.toString());
+//            }
+//        });
 
         setupBluetooth();
     }
+
+
+
+
 
     // For Testing
     private void clearTweetsCreate1Test() {
@@ -381,5 +456,35 @@ public class MainActivity extends AppCompatActivity {
     void removeConnection(ConnectedThread connection) {
         deviceService.addToClose(connection);
         openConnections.remove(connection.getID());
+    }
+
+    // MENU
+    public boolean onCreateOptionsMenu(Menu menu)
+    {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.menu_main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.action_delete_all_db:
+                // User chose the "Settings" item, show the app settings UI...
+                Utils.removeAllItemsFromDB();
+                Utils.logAllTweetsInDB(this);
+                refreshListView();
+                return true;
+
+            default:
+                // If we got here, the user's action was not recognized.
+                // Invoke the superclass to handle it.
+                return super.onOptionsItemSelected(item);
+
+        }
+    }
+
+    public void refreshListView() {
+        mRecyclerView.setAdapter(new TweetsListAdapter(Utils.getAllDbTweets()));
     }
 }

@@ -30,4 +30,8 @@ dependencies {
     compile 'com.madgag.spongycastle:prov:1.51.0.0'
     compile 'com.madgag.spongycastle:pkix:1.51.0.0'
     compile 'com.madgag.spongycastle:pg:1.51.0.0'
+    compile 'com.getbase:floatingactionbutton:1.10.1'
+    compile('com.github.afollestad.material-dialogs:core:0.8.5.4@aar') {
+        transitive = true
+    }
 }
