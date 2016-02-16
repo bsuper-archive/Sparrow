@@ -107,12 +107,19 @@ public class Utils {
         }
     }
 
+    /**
+     * Getter for Human readable username for identifying another person during encryption
+     */
     public static String getUsername(Context context) {
         SharedPreferences settings = context.getSharedPreferences(Utils.PREFS_NAME, 0);
         String username = settings.getString(Utils.MY_USERNAME_KEY, "dummy_username");
         return username;
     }
 
+    /**
+     * Setter for
+     * Human readable username for identifying another person during encryption
+     */
     public static String setUsername(Context context, String username) {
         SharedPreferences settings = context.getSharedPreferences(Utils.PREFS_NAME, 0);
         settings.edit().putString(Utils.MY_USERNAME_KEY, username).commit();
