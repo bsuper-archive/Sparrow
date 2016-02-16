@@ -195,6 +195,7 @@ public class Utils {
      * Takes in a message that I created and stores it in the database
      */
     public static void constructNewTweet(Context context, String recipient, String msg) {
+        if (recipient.equals("ALL")) recipient = "";
         Log.d(TAG, "Message is: " + msg);
         incrementVCTime(context);
         constructNewTweet(context, new Random().nextInt(), Utils.getUsername(context), recipient, msg);

@@ -83,6 +83,10 @@ public class MainActivity extends AppCompatActivity {
     String recipient = "";
     String msg = "";
 
+    MaterialDialog msgContent;
+    MaterialDialog recipientDialog;
+
+
     /************************************************
      * ACTIVITY LIFE CYCLE METHODS *
      ************************************************/
@@ -114,7 +118,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 new MaterialDialog.Builder(MainActivity.this)
-                .title("Enter new username")
+                        .title("Enter new username")
                         .inputType(InputType.TYPE_CLASS_TEXT)
                         .input("Message text", "", new MaterialDialog.InputCallback() {
                             @Override
@@ -132,7 +136,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        final MaterialDialog msgContent = new MaterialDialog.Builder(MainActivity.this)
+        msgContent = new MaterialDialog.Builder(MainActivity.this)
                 .title("Enter message text")
                 .inputType(InputType.TYPE_CLASS_TEXT)
                 .input("Message text", "", new MaterialDialog.InputCallback() {
@@ -144,14 +148,14 @@ public class MainActivity extends AppCompatActivity {
                 .onPositive(new MaterialDialog.SingleButtonCallback() {
                     @Override
                     public void onClick(@NonNull MaterialDialog dialog, @NonNull DialogAction which) {
-                        Utils.constructNewTweet(MainActivity.this, "", dialog.getInputEditText().getText().toString());
+                        Utils.constructNewTweet(MainActivity.this, Utils.getPossibleRecipients().get(recipientDialog.getSelectedIndex()), dialog.getInputEditText().getText().toString());
                         Utils.logAllTweetsInDB(MainActivity.this);
                         refreshListView();
                     }
                 })
                 .positiveText("Send").build();
 
-        final MaterialDialog recipientDialog = new MaterialDialog.Builder(MainActivity.this)
+        recipientDialog = new MaterialDialog.Builder(MainActivity.this)
                 .title("Choose a recipient")
                 .items(Utils.getPossibleRecipients())
                 .itemsCallbackSingleChoice(-1, new MaterialDialog.ListCallbackSingleChoice() {
