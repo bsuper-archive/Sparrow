@@ -290,8 +290,10 @@ public class Utils {
      * Used when we have to update the database
      */
     public static void dropTables() {
-        SQLiteUtils.execSql("DROP TABLE DBVectorClockItems");
-        SQLiteUtils.execSql("DROP TABLE DBTweets");
+        SQLiteUtils.execSql("DROP TABLE IF EXISTS DBVectorClockItems");
+        SQLiteUtils.execSql("DROP TABLE IF EXISTS DBTweets");
+        SQLiteUtils.execSql("DROP TABLE IF EXISTS DBUsers");
+        SQLiteUtils.execSql("DROP TABLE IF EXISTS UsersWithEncryption");
     }
 
     /************************************************
@@ -339,6 +341,7 @@ public class Utils {
         for (DBUser u : dbUsers) {
             users.add(u.toString());
         }
+        users.add(0, "All");
         return users;
     }
 
