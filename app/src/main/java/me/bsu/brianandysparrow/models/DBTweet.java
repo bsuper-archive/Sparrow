@@ -13,7 +13,7 @@ import me.bsu.proto.VectorClockItem;
 @Table(name = "DBTweets")
 public class DBTweet extends Model implements Comparable<DBTweet> {
 
-    @Column(name = "tweet_id")
+    @Column(name = "tweet_id", unique = true, onUniqueConflict = Column.ConflictAction.REPLACE)
     public int tweetID;
 
     @Column(name = "author")
