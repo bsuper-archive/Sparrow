@@ -20,6 +20,7 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.afollestad.materialdialogs.DialogAction;
@@ -43,6 +44,7 @@ public class MainActivity extends AppCompatActivity {
     // UI
     FloatingActionButton fab;
     RecyclerView mRecyclerView;
+    TextView mUsernameTextview;
 
     // Bluetooth
     private DeviceConnector deviceService;
@@ -106,14 +108,37 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+        mUsernameTextview = (TextView) findViewById(R.id.username_textview);
+        mUsernameTextview.setText(String.format("Username: %s", Utils.getUsername(this)));
+        mUsernameTextview.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                new MaterialDialog.Builder(MainActivity.this)
+                .title("Enter new username")
+                        .inputType(InputType.TYPE_CLASS_TEXT)
+                        .input("Message text", "", new MaterialDialog.InputCallback() {
+                            @Override
+                            public void onInput(MaterialDialog dialog, CharSequence input) {
+                            }
+                        })
+                        .onPositive(new MaterialDialog.SingleButtonCallback() {
+                            @Override
+                            public void onClick(@NonNull MaterialDialog dialog, @NonNull DialogAction which) {
+                                Utils.setUsername(MainActivity.this, dialog.getInputEditText().getText().toString());
+                                mUsernameTextview.setText(String.format("Username: %s", dialog.getInputEditText().getText().toString()));
+                            }
+                        })
+                        .positiveText("Change").show();
+            }
+        });
+
         final MaterialDialog msgContent = new MaterialDialog.Builder(MainActivity.this)
                 .title("Enter message text")
                 .inputType(InputType.TYPE_CLASS_TEXT)
                 .input("Message text", "", new MaterialDialog.InputCallback() {
                     @Override
                     public void onInput(MaterialDialog dialog, CharSequence input) {
-                        MainActivity.this.msg = input.toString();
-                        Log.d(TAG, "Entered msg: " + MainActivity.this.msg);
+                        Log.d(TAG, "Entered msg: " + input.toString());
                     }
                 })
                 .onPositive(new MaterialDialog.SingleButtonCallback() {

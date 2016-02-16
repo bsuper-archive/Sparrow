@@ -13,6 +13,8 @@ enum Feature {
 
   // FILL IN (IF NEEDED)
   VECTOR_CLOCK = 2;
+
+  ENCRYPTION = 3;
 }
 
 // Control message sent between the client and server before data exchange.

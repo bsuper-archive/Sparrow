@@ -43,8 +43,16 @@ public class Utils {
 
     public static final String MY_UUID_KEY = "MY_UUID_KEY";
     public static final String MY_VC_TIME_KEY = "MY_VC_TIME_KEY";
+    public static final String MY_USERNAME_KEY = "MY_USERNAME_KEY";
     public static final String PREFS_NAME = "MY_PREFS";
 
+    /************************************************
+     *
+     *
+     * PREFERENCES
+     *
+     *
+     ************************************************/
 
     /**
      * Gets my UUID, creating it if necessary
@@ -99,6 +107,18 @@ public class Utils {
         }
     }
 
+    public static String getUsername(Context context) {
+        SharedPreferences settings = context.getSharedPreferences(Utils.PREFS_NAME, 0);
+        String username = settings.getString(Utils.MY_USERNAME_KEY, "dummy_username");
+        return username;
+    }
+
+    public static String setUsername(Context context, String username) {
+        SharedPreferences settings = context.getSharedPreferences(Utils.PREFS_NAME, 0);
+        settings.edit().putString(Utils.MY_USERNAME_KEY, username).commit();
+        return username;
+    }
+
     /**
      * Create a new vector clock time for the user
      */
@@ -140,6 +160,18 @@ public class Utils {
     public static TweetExchange constructTweetExchangeWithAllTweets() {
         List<DBTweet> dbTweets = getAllDbTweets();
 
+        List <Tweet> tweets = new ArrayList<>();
+        for (DBTweet dbTweet : dbTweets) {
+            tweets.add(dbTweet.createTweet());
+        }
+        return new TweetExchange.Builder().tweets(tweets).build();
+    }
+
+    /**
+     * Get all tweets that can be sent to recipient
+     */
+    public static TweetExchange constructTweetExchangeForUser(String recipient) {
+        List<DBTweet> dbTweets = new Select().from(DBTweet.class).where("recipient = ?", new String[] {recipient, ""}).execute();
         List <Tweet> tweets = new ArrayList<>();
         for (DBTweet dbTweet : dbTweets) {
             tweets.add(dbTweet.createTweet());
