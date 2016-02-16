@@ -267,18 +267,22 @@ public class DeviceConnector extends Service {
      * @param btd
      */
     public void closeConnection(BluetoothDevice btd) {
-        ConnectThread t = connectedDevices.get(btd).thread;
-        if (t != null) {
-            t.cancel();
+        if (connectedDevices.containsKey(btd)) {
+            ConnectThread t = connectedDevices.get(btd).thread;
+            if (t != null) {
+                t.cancel();
+            }
+            connectedDevices.remove(btd);
         }
-        connectedDevices.remove(btd);
     }
 
     public void closeSuccessfulConnection(BluetoothDevice btd) {
         closeConnection(btd);
-        ConnectedThread conn = shouldClose.get(btd);
-        conn.cancel();
-        shouldClose.remove(btd);
+        if (shouldClose.containsKey(btd)) {
+            ConnectedThread conn = shouldClose.get(btd);
+            conn.cancel();
+            shouldClose.remove(btd);
+        }
     }
 
     /**
