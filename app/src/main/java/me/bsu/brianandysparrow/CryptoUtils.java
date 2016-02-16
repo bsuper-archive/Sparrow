@@ -1,6 +1,7 @@
 package me.bsu.brianandysparrow;
 
 import android.util.Log;
+import android.util.Base64;
 
 import org.spongycastle.crypto.engines.AESFastEngine;
 import org.spongycastle.crypto.engines.RSAEngine;
@@ -15,6 +16,7 @@ import org.spongycastle.jcajce.provider.symmetric.AES;
 import org.spongycastle.jce.provider.BouncyCastleProvider;
 
 import java.io.IOException;
+import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.Security;
@@ -25,6 +27,8 @@ import java.security.KeyPair;
 import java.security.Key;
 import java.security.SecureRandom;
 import java.security.spec.AlgorithmParameterSpec;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 
 import javax.crypto.KeyGenerator;
 import javax.crypto.Cipher;
@@ -73,6 +77,18 @@ public class CryptoUtils {
         return keyGen.generateKey();
     }
 
+    static String keyToString(Key key) {
+        return Base64.encodeToString(key.getEncoded(), Base64.DEFAULT);
+    }
+
+    static PublicKey stringToPublicKey(String str) throws Exception {
+        return KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(Base64.decode(str, Base64.DEFAULT)));
+    }
+
+    static PrivateKey stringToPrivateKey(String str) throws Exception {
+        return KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(Base64.decode(str, Base64.DEFAULT)));
+    }
+
     /***************************
      * RSA Encryption for keys *
      ***************************/
@@ -114,7 +130,7 @@ public class CryptoUtils {
     }
 
     static byte[] getAESResult(byte[] data, Key key, Boolean encrypt) throws Exception {
-        AlgorithmParameterSpec iv = new IvParameterSpec("ASDFASDFKLJASLASDF".getBytes()); // this could be randomized
+        AlgorithmParameterSpec iv = new IvParameterSpec("ASDFASDFKLJASLASDFASDFASDFASDFLKASDFASDFASDFASDASDFASDFJHHJHJASDFIEW".getBytes()); // this could be randomized for extra security, but eh
         int mode = (encrypt ? Cipher.ENCRYPT_MODE : Cipher.DECRYPT_MODE);
         byte[] result = null;
         AESCipher.init(mode, key, iv);

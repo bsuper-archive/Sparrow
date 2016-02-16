@@ -2,11 +2,13 @@ package me.bsu.brianandysparrow;
 
 import android.test.AndroidTestCase;
 import android.util.Log;
+import android.util.Base64;
 
 import org.spongycastle.crypto.engines.AESFastEngine;
 import org.spongycastle.crypto.paddings.PaddedBufferedBlockCipher;
 import org.spongycastle.crypto.params.KeyParameter;
 import org.spongycastle.jce.provider.BouncyCastleProvider;
+import org.spongycastle.util.io.pem.PemWriter;
 
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
@@ -51,6 +53,7 @@ public class CryptoTest extends AndroidTestCase {
 
         // Encrypt AES key using key pair
         byte[] encryptedKey = CryptoUtils.encryptKey(SymKey.getEncoded(), AsymKeyPair.getPublic());
+
         // Send data over to other side......not actually
 
         // Decrypt key using RSA private key
@@ -70,5 +73,22 @@ public class CryptoTest extends AndroidTestCase {
         byte[] decryptedData = CryptoUtils.decryptData(encryptedData, SymKey);
 
         assertEquals("Data didn't match", data, new String(decryptedData));
+    }
+
+    // Test writing and recovering public key as string
+    public void test3() throws Exception {
+        KeyPair AsymKeyPair = CryptoUtils.generateRSAKeyPair();
+        PublicKey pub = AsymKeyPair.getPublic();
+        PrivateKey priv = AsymKeyPair.getPrivate();
+
+        String keyStr = CryptoUtils.keyToString(pub);
+        PublicKey pubKey = CryptoUtils.stringToPublicKey(keyStr);
+
+        assertEquals("PublicKey didn't match", pub, pubKey);
+
+        keyStr = CryptoUtils.keyToString(priv);
+        PrivateKey privKey = CryptoUtils.stringToPrivateKey(keyStr);
+
+        assertEquals("PrivateKey didn't match", priv, privKey);
     }
 }

@@ -23,7 +23,8 @@ message Handshake {
   // DO NOT CHANGE ANYTHING ABOVE THIS LINE.
 
   // FILL IN (IF NEEDED)
-  required string uuid = 2;
+  optional string uuid = 2;
+  optional string username = 3;
 }
 
 // A single message.  Can be either public or private.
