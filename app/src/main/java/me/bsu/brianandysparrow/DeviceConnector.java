@@ -43,7 +43,7 @@ public class DeviceConnector extends Service {
     private LocalBinder mIBinder;
     private ConcurrentHashMap<BluetoothDevice, DeviceTriplet> connectedDevices = new ConcurrentHashMap<>();
     private int ANDROID_DEVICE_LIMIT = 5;
-    private UUID BLUETOOTH_UUID = UUID.fromString("9a74be0b-49c2-4a93-9dee-df037f822b4");
+    private UUID BLUETOOTH_UUID = UUID.fromString("ae0267ba-82fe-4049-85b3-c8c1ad0ac854");
     private String APP_NAME = "GROUP-10-TWITTER-BT";
     private Handlers.ServiceConnectHandler connectHandler;
     private HashMap<BluetoothDevice, ConnectedThread> shouldClose = new HashMap<>();
